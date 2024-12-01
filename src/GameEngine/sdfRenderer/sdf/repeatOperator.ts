@@ -1,4 +1,4 @@
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 
 export const repeatXYZ = wgsl.fn`(pos: vec3f, tile_size: vec3f) -> vec3f {
   return round(pos / tile_size) * tile_size;

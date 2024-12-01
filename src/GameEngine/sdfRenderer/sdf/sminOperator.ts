@@ -1,4 +1,4 @@
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 
 /**
  * polynomial smooth min 2

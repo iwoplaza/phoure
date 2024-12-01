@@ -1,4 +1,5 @@
-import { builtin, wgsl, type TypeGpuRuntime } from 'typegpu';
+// @ts-nocheck
+import { builtin, wgsl } from 'typegpu/experimental';
 import { fullScreenQuadVertexShader } from '../../shaders/fullScreenQuad';
 
 type Options = {

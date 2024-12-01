@@ -5,7 +5,7 @@ import { i32, struct } from 'typegpu/data';
 
 import type { GBuffer } from '../gBuffer';
 import { SceneSchema } from '../schema/scene';
-import { NetworkLayer } from '../networkLayer';
+import { NetworkLayer } from '../mending/networkLayer';
 import { convolveFn } from './convolve';
 import { convertRgbToY } from './sdfRenderer/colorUtils';
 

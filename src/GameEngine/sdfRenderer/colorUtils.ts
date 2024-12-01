@@ -1,4 +1,4 @@
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 
 export const convertRgbToY = wgsl.fn`(rgb: vec3f) -> f32 {
   return 16./255. + (64.738 * rgb.r + 129.057 * rgb.g + 25.064 * rgb.b) / 255.;

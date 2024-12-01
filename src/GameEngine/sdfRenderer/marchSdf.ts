@@ -1,15 +1,17 @@
-import { wgsl, type WgslFn } from 'typegpu';
-import { struct, u32, vec3f } from 'typegpu/data';
+import { wgsl, type TgpuFn } from 'typegpu/experimental';
+import * as d from 'typegpu/data';
 import worldSdf, { FAR, ShapeContext } from './worldSdf';
 
 export const MAX_STEPS = 500;
 
-export const MarchResult = struct({
-  steps: u32,
-  position: vec3f,
+export const MarchResult = d.struct({
+  steps: d.u32,
+  position: d.vec3f,
 });
 
-export const march = (distThresholdFn: WgslFn) =>
+// const distThresholdFnSlot = wgsl.slot<TgpuFn<[], typeof ShapeContext>>();
+
+export const march = (distThresholdFn: TgpuFn<[typeof ShapeContext], d.F32>) =>
   wgsl.fn`(ctx: ptr<function, ${ShapeContext}>, limit: u32, out: ptr<function, ${MarchResult}>) {
     var pos = (*ctx).ray_pos;
     var prev_dist = -1.;

@@ -1,4 +1,4 @@
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 
 export const extrude = wgsl.fn`(dxy: f32, dz: f32, h: f32) -> f32 {
   let w = vec2f(dxy, abs(dz) - h);

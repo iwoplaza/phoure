@@ -44,15 +44,12 @@ dependencies:
   tailwindcss-animate:
     specifier: ^1.0.7
     version: 1.0.7(tailwindcss@3.4.10)
-  typed-binary:
-    specifier: ^4.0.1
-    version: 4.0.1
   typegpu:
-    specifier: 0.0.0-alpha.4
-    version: 0.0.0-alpha.4(typed-binary@4.0.1)
+    specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/12b4820a/typegpu
+    version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/12b4820a/typegpu'
   wgpu-matrix:
-    specifier: ^2.4.2
-    version: 2.9.1
+    specifier: ^3.3.0
+    version: 3.3.0
 
 devDependencies:
   '@types/node':
@@ -3989,6 +3986,11 @@ packages:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
     dev: true
 
+  /tinyest@0.0.0:
+    resolution: {integrity: sha512-rCvaLewct/tm5CVLMdoa6xKNHWxT60AwhrmF7mjtkhj8w8VCeAg44NB2bzohEfN1SzfPCSyuB8GMmC/BV2gyjw==}
+    engines: {node: '>=12.20.0'}
+    dev: false
+
   /tinypool@0.8.4:
     resolution: {integrity: sha512-i11VH5gS6IFeLY3gMBQ00/MmLncVP7JLXOw1vlgkytLmJK7QnEr7NXf0LBdxfmNPAeyetukOk0bOYrJrFGjYJQ==}
     engines: {node: '>=14.0.0'}
@@ -4089,15 +4091,6 @@ packages:
 
   /typed-binary@4.0.1:
     resolution: {integrity: sha512-nne2iMvXX8Qi3KI7do55udYsPNIUr7zFhPJNdWpujkWUzr6sJK6gQjCUcZGMM6+lws75oiFtGk8if6S2KgWppg==}
-    dev: false
-
-  /typegpu@0.0.0-alpha.4(typed-binary@4.0.1):
-    resolution: {integrity: sha512-2YSSQLrJ2Xws8k5CyrSwserlAcf9dvlk2pXmy8skmKPYBdRiM63IX8yzctZpAUGvvrsHMLy1vkqmTqQGQRiluQ==}
-    engines: {node: '>=12.20.0'}
-    peerDependencies:
-      typed-binary: ^4.0.1
-    dependencies:
-      typed-binary: 4.0.1
     dev: false
 
   /typescript@5.5.4:
@@ -4328,8 +4321,8 @@ packages:
       - terser
     dev: true
 
-  /wgpu-matrix@2.9.1:
-    resolution: {integrity: sha512-eJqSM1nNvzcfDhSFCwcbjAkxkaqwQl6KnxOsL52ydwfwQW9yIODgmKJaKTKnutxbfAGGZE1KVT3NgX71TJ/OpA==}
+  /wgpu-matrix@3.3.0:
+    resolution: {integrity: sha512-MRdywXdzTwX9pVbO5Z/oRX9l7464Wkfv28glG1c7t7s5v/0Dvts6yV8b4AOTOTl1UDGq9KUEAoSN6KW5P12ruQ==}
     dev: false
 
   /which-boxed-primitive@1.0.2:
@@ -4412,3 +4405,13 @@ packages:
     resolution: {integrity: sha512-b4JR1PFR10y1mKjhHY9LaGo6tmrgjit7hxVIeAmyMw3jegXR4dhYqLaQF5zMXZxY7tLpMyJeLjr1C4rLmkVe8g==}
     engines: {node: '>=12.20'}
     dev: true
+
+  '@pkg.csb.dev/software-mansion/TypeGPU/commit/12b4820a/typegpu':
+    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/12b4820a/typegpu}
+    name: typegpu
+    version: 0.2.0
+    engines: {node: '>=12.20.0'}
+    dependencies:
+      tinyest: 0.0.0
+      typed-binary: 4.0.1
+    dev: false

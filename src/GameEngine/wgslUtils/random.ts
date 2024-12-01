@@ -1,4 +1,4 @@
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 import { vec2f } from 'typegpu/data';
 import { PI, TWO_PI } from './mathConstants';
 

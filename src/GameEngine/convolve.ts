@@ -1,4 +1,4 @@
-import { type Eventual, type Wgsl, wgsl } from 'typegpu';
+import { type Eventual, type Wgsl, wgsl } from 'typegpu/experimental';
 
 export type SampleFiller = (x: Wgsl, y: Wgsl, outSamplePtr: Wgsl) => Wgsl;
 export type KernelReader = (idx: Wgsl) => Wgsl;

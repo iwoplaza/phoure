@@ -45,8 +45,7 @@
     "react-dom": "^18.2.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
-    "typed-binary": "^4.0.1",
-    "typegpu": "0.0.0-alpha.4",
-    "wgpu-matrix": "^2.4.2"
+    "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/12b4820a/typegpu",
+    "wgpu-matrix": "^3.3.0"
   }
 }

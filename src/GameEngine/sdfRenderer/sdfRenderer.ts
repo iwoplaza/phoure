@@ -1,49 +1,52 @@
 import { atom } from 'jotai';
-import { builtin, wgsl, type TypeGpuRuntime } from 'typegpu';
-import { f32, struct, vec3f } from 'typegpu/data';
+import tgpu, {
+  type TgpuFn,
+  wgsl,
+  type ExperimentalTgpuRoot,
+  asUniform,
+} from 'typegpu/experimental';
+import * as d from 'typegpu/data';
 import type { GBuffer } from '../../gBuffer';
 import {
-  cameraUniform,
   Camera,
+  CameraStruct,
   constructRayDir,
   constructRayPos,
+  getCameraProps,
 } from './camera';
 import { randOnHemisphere, setupRandomSeed } from '../wgslUtils/random';
 import worldSdf, {
-  randomSeedPrimerBuffer,
-  timeBuffer,
   Material,
-  RenderTargetHeight,
-  RenderTargetWidth,
   ShapeContext,
   skyColor,
   surfaceDist,
   worldMat,
-  randomSeedPrimerUniform,
 } from './worldSdf';
 import { ONES_3F } from '../wgslUtils/mathConstants';
 import { MAX_STEPS, MarchResult, march } from './marchSdf';
 import { convertRgbToY } from './colorUtils';
 import { store } from '@/store';
+import { getViewportSizeSlot } from '../commonSlots';
+
+const BlockSize = 8;
 
 // parameters
 const OutputFormat = wgsl.slot().$name('output_format');
-const BlockSize = wgsl.slot().$name('block_size');
 
 const SUPER_SAMPLES = 4;
 const ONE_OVER_SUPER_SAMPLES = 1 / SUPER_SAMPLES;
 const SUB_SAMPLES = 16;
 const MAX_REFL = 3;
 
-const Reflection = struct({
-  color: vec3f,
-  roughness: f32,
-}).$name('reflection');
+const getRandomSeedPrimerSlot = wgsl.slot<TgpuFn<[], d.F32>>();
+const getAccumulatedLayersSlot = wgsl.slot<TgpuFn<[], d.U32>>();
+
+const Reflection = d.struct({
+  color: d.vec3f,
+  roughness: d.f32,
+});
 
 export const accumulatedLayersAtom = atom(0);
-
-// How many layers (previous renders) are stacked on top of each other to reduce noise.
-const layersBuffer = wgsl.buffer(f32).$name('layers').$allowUniform();
 
 const marchWithSurfaceDist = march(surfaceDist).$name(
   'march_with_surface_dist',
@@ -177,218 +180,241 @@ const renderSubPixel = wgsl.fn`(coord: vec2f) -> vec3f {
   return acc;
 }`.$name('render_sub_pixel');
 
-const mainComputeFn = wgsl.fn`(LocalInvocationID: vec3u, GlobalInvocationID: vec3u) {
-  ${setupRandomSeed}(vec2f(GlobalInvocationID.xy) * ${Math.random()} + ${randomSeedPrimerUniform} * ${Math.random()});
+const mainLayout = tgpu.bindGroupLayout({
+  previousRender: { texture: 'unfilterable-float' },
+  mainOutput: { storageTexture: 'rgba8unorm', access: 'writeonly' },
+});
 
-  let prev_layers = ${layersBuffer.asUniform()};
-  let prev_render = textureLoad(input_tex, GlobalInvocationID.xy, 0);
+const tempFn = tgpu
+  .fn([d.vec3u])
+  .does(`(gid: vec3u) {
+    setupRandomSeed(vec2f(gid.xy) * ${Math.random()} + getRandomSeedPrimerSlot() * ${Math.random()});
 
-  var acc = vec3f(0., 0., 0.);
-  for (var sx = 0u; sx < ${SUPER_SAMPLES}; sx++) {
-    for (var sy = 0u; sy < ${SUPER_SAMPLES}; sy++) {
-      let offset = vec2f(
-        (f32(sx) + 0.5) * ${ONE_OVER_SUPER_SAMPLES},
-        (f32(sy) + 0.5) * ${ONE_OVER_SUPER_SAMPLES},
-      );
-
-      acc += ${renderSubPixel}(vec2f(GlobalInvocationID.xy) + offset);
-    }
-  }
-
-  acc *= ${ONE_OVER_SUPER_SAMPLES} * ${ONE_OVER_SUPER_SAMPLES};
-
-  // applying gamma correction
-  let gamma = 2.2;
-  acc = pow(acc, vec3(1.0 / gamma));
-
-  var new_render = vec4(acc, 1.0);
-  if (prev_layers > 0) {
-    new_render = (prev_render * prev_layers + vec4(acc, 1.0)) / (prev_layers + 1);
-  }
-
-  textureStore(output_tex, GlobalInvocationID.xy, new_render);
-}`.$name('main_compute');
-
-const auxComputeFn = wgsl.fn`(LocalInvocationID: vec3<u32>, GlobalInvocationID: vec3<u32>) {
-  let offset = vec2f(
-    0.5,
-    0.5,
-  );
+    let prev_layers = getAccumulatedLayersSlot();
+    let prev_render = textureLoad(previousRender, gid.xy, 0);
   
-  var march_result: ${MarchResult};
-  var shape_ctx: ${ShapeContext};
-  shape_ctx.ray_pos = ${constructRayPos}();
-  shape_ctx.ray_dir = ${constructRayDir}(
-    vec2f(GlobalInvocationID.xy) + offset
-  );
-  shape_ctx.ray_distance = 0.;
+    var acc = vec3f(0., 0., 0.);
+    for (var sx = 0u; sx < ${SUPER_SAMPLES}; sx++) {
+      for (var sy = 0u; sy < ${SUPER_SAMPLES}; sy++) {
+        let offset = vec2f(
+          (f32(sx) + 0.5) * ${ONE_OVER_SUPER_SAMPLES},
+          (f32(sy) + 0.5) * ${ONE_OVER_SUPER_SAMPLES},
+        );
+  
+        acc += renderSubPixel(vec2f(gid.xy) + offset);
+      }
+    }
+  
+    acc *= ${ONE_OVER_SUPER_SAMPLES} * ${ONE_OVER_SUPER_SAMPLES};
+  
+    // applying gamma correction
+    let gamma = 2.2;
+    acc = pow(acc, vec3(1.0 / gamma));
+  
+    var new_render = vec4(acc, 1.0);
+    if (prev_layers > 0) {
+      new_render = (prev_render * prev_layers + vec4(acc, 1.0)) / (prev_layers + 1);
+    }
+  
+    textureStore(mainOutput, gid.xy, new_render);
+  }`)
+  .$uses({
+    previousRender: mainLayout.bound.previousRender,
+    mainOutput: mainLayout.bound.mainOutput,
+    setupRandomSeed,
+    renderSubPixel,
+    getRandomSeedPrimerSlot,
+    getAccumulatedLayersSlot,
+  });
 
-  ${marchWithSurfaceDist}(&shape_ctx, ${MAX_STEPS}, &march_result);
+const mainComputeFn = tgpu
+  .computeFn([], { workgroupSize: [BlockSize, BlockSize] })
+  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
+    tempFn(gid);
+  }`)
+  .$uses({
+    tempFn,
+  });
 
-  var world_normal: vec3f;
+const auxLayout = tgpu
+  .bindGroupLayout({
+    auxOutput: { storageTexture: 'rgba16float' },
+  })
+  .$name('SDF Renderer: Aux Bind Group Layout');
 
-  if (march_result.steps >= ${MAX_STEPS}) {
-    world_normal = -shape_ctx.ray_dir;
-  }
-  else {
-    world_normal = ${worldNormals}(march_result.position, shape_ctx);
-  }
-
-  var material: ${Material};
-  ${worldMat}(march_result.position, shape_ctx, &material);
-
-  let white = vec3f(1., 1., 1.);
-  let mat_color = min(material.albedo, white);
-
-  var albedo_luminance = ${convertRgbToY}(mat_color);
-  var emission_luminance = 0.;
-  if (material.emissive) {
-    // albedo_luminance = 0.3;
-    // emission_luminance = albedo_luminance;
-  }
-
-  let view_normal = ${cameraUniform}.view_matrix * vec4f(world_normal, 0);
-
-  let aux = vec4(
-    view_normal.xy,
-    albedo_luminance,
-    emission_luminance
-  );
-
-  // TODO: maybe apply gamma correction to the albedo luminance parameter??
-
-  textureStore(output_tex, GlobalInvocationID.xy, aux);
-}`;
+const auxComputeFn = tgpu
+  .computeFn([], { workgroupSize: [BlockSize, BlockSize] })
+  .does(`(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
+    let offset = vec2f(
+      0.5,
+      0.5,
+    );
+    
+    var march_result: MarchResult;
+    var shape_ctx: ShapeContext;
+    shape_ctx.ray_pos = constructRayPos();
+    shape_ctx.ray_dir = constructRayDir(
+      vec2f(GlobalInvocationID.xy) + offset
+    );
+    shape_ctx.ray_distance = 0.;
+  
+    marchWithSurfaceDist(&shape_ctx, ${MAX_STEPS}, &march_result);
+  
+    var world_normal: vec3f;
+  
+    if (march_result.steps >= ${MAX_STEPS}) {
+      world_normal = -shape_ctx.ray_dir;
+    }
+    else {
+      world_normal = worldNormals(march_result.position, shape_ctx);
+    }
+  
+    var material: Material;
+    worldMat(march_result.position, shape_ctx, &material);
+  
+    let white = vec3f(1., 1., 1.);
+    let mat_color = min(material.albedo, white);
+  
+    var albedo_luminance = convertRgbToY(mat_color);
+    var emission_luminance = 0.;
+    if (material.emissive) {
+      // albedo_luminance = 0.3;
+      // emission_luminance = albedo_luminance;
+    }
+  
+    let camera = getCameraProps();
+    let view_normal = camera.view_matrix * vec4f(world_normal, 0);
+  
+    let aux = vec4(
+      view_normal.xy,
+      albedo_luminance,
+      emission_luminance
+    );
+  
+    // TODO: maybe apply gamma correction to the albedo luminance parameter??
+  
+    textureStore(auxOutput, GlobalInvocationID.xy, aux);
+  }`)
+  .$uses({
+    MarchResult,
+    ShapeContext,
+    Material,
+    constructRayPos,
+    constructRayDir,
+    marchWithSurfaceDist,
+    worldNormals,
+    worldMat,
+    convertRgbToY,
+    getCameraProps,
+    auxOutput: auxLayout.bound.auxOutput,
+  });
 
 export const SDFRenderer = async (
-  runtime: TypeGpuRuntime,
+  root: ExperimentalTgpuRoot,
   gBuffer: GBuffer,
   renderQuarter: boolean,
 ) => {
   const LABEL = 'SDF Renderer';
-  const blockDim = 8;
+
   const mainPassSize = renderQuarter ? gBuffer.quarterSize : gBuffer.size;
 
-  const camera = new Camera();
+  const camera = new Camera(root);
 
-  const mainBindGroupLayout = runtime.device.createBindGroupLayout({
-    label: `${LABEL} - Main Bind Group Layout`,
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.COMPUTE,
-        texture: {
-          sampleType: 'unfilterable-float',
-        },
-      },
-      {
-        binding: 1,
-        visibility: GPUShaderStage.COMPUTE,
-        storageTexture: {
-          format: 'rgba8unorm',
-        },
-      },
-    ],
+  const randomSeedPrimerBuffer = root.createBuffer(d.f32).$usage('uniform');
+  const randomSeedPrimerUniform = asUniform(randomSeedPrimerBuffer);
+
+  // How many layers (previous renders) are stacked on top of each other to reduce noise.
+  const layersBuffer = root.createBuffer(d.u32).$usage('uniform');
+  const layersUniform = asUniform(layersBuffer);
+
+  const myGetRandomSeedPrimer = tgpu
+    .fn([], d.f32)
+    .does(`() -> f32 {
+      return randomSeedPrimerUniform;
+    }`)
+    .$uses({ randomSeedPrimerUniform });
+
+  const myGetAccumulatedLayers = tgpu
+    .fn([], d.u32)
+    .does(`() -> u32 {
+      return layersUniform;
+    }`)
+    .$uses({ layersUniform });
+
+  const viewportSizeBuffer = root
+    .createBuffer(d.vec2f, d.vec2f(...mainPassSize))
+    .$usage('uniform');
+
+  const myGetViewportSize = tgpu
+    .fn([], d.vec2f)
+    .does(`() -> vec2f {
+      return viewportSize;
+    }`)
+    .$uses({ viewportSize: asUniform(viewportSizeBuffer) });
+
+  const cameraUniform = asUniform(camera.cameraBuffer);
+
+  const myGetCameraProps = tgpu
+    .fn([], CameraStruct)
+    .does(`() -> CameraStruct {
+      return cameraUniform;
+    }`)
+    .$uses({ CameraStruct, cameraUniform });
+
+  const auxBindGroup = auxLayout.populate({
+    auxOutput: gBuffer.auxView,
   });
 
-  const auxBindGroupLayout = runtime.device.createBindGroupLayout({
-    label: `${LABEL} - Aux Bind Group Layout`,
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.COMPUTE,
-        storageTexture: {
-          format: 'rgba16float',
-        },
-      },
-    ],
-  });
-
-  const auxBindGroup = runtime.device.createBindGroup({
-    label: `${LABEL} - Aux Bind Group`,
-    layout: auxBindGroupLayout,
-    entries: [
-      {
-        binding: 0,
-        resource: gBuffer.auxView,
-      },
-    ],
-  });
-
-  const mainPipeline = runtime.makeComputePipeline({
-    label: `${LABEL} - main`,
-    workgroupSize: [blockDim, blockDim],
-    code: wgsl`
-      ${wgsl.declare`@group(0) @binding(0) var input_tex: texture_2d<f32>;`}
-      ${wgsl.declare`@group(0) @binding(1) var output_tex: texture_storage_2d<${OutputFormat}, write>;`}
-      ${mainComputeFn}(${builtin.localInvocationId}, ${builtin.globalInvocationId});
-    `
-      // filling slots
-      .with(OutputFormat, 'rgba8unorm')
-      .with(RenderTargetWidth, mainPassSize[0])
-      .with(RenderTargetHeight, mainPassSize[1])
-      .with(BlockSize, blockDim),
+  const mainPipeline = root
+    // filling slots
+    .with(OutputFormat, 'rgba8unorm')
+    .with(getRandomSeedPrimerSlot, myGetRandomSeedPrimer)
+    .with(getAccumulatedLayersSlot, myGetAccumulatedLayers)
+    .with(getCameraProps, myGetCameraProps)
+    .with(getViewportSizeSlot, myGetViewportSize)
     // ---
-    externalLayouts: [mainBindGroupLayout],
-  });
+    .withCompute(mainComputeFn)
+    .createPipeline()
+    .$name(`${LABEL} - main pipeline`);
 
-  const auxPipeline = runtime.makeComputePipeline({
-    label: `${LABEL} - aux`,
-    workgroupSize: [blockDim, blockDim],
-    code: wgsl`
-      ${wgsl.declare`@group(0) @binding(0) var output_tex: texture_storage_2d<${OutputFormat}, write>;`}
-      ${auxComputeFn}(${builtin.localInvocationId}, ${builtin.globalInvocationId});
-    `
-      // filling slots
-      .with(OutputFormat, 'rgba16float')
-      .with(RenderTargetWidth, gBuffer.size[0])
-      .with(RenderTargetHeight, gBuffer.size[1])
-      .with(BlockSize, blockDim),
+  const auxPipeline = root
+    // filling slots
+    .with(OutputFormat, 'rgba16float')
+    .with(getCameraProps, myGetCameraProps)
+    .with(getViewportSizeSlot, myGetViewportSize)
     // ---
-    externalLayouts: [auxBindGroupLayout],
-  });
+    .withCompute(auxComputeFn)
+    .createPipeline()
+    .$name(`${LABEL} - aux pipeline`)
+    //
+    .with(auxLayout, auxBindGroup);
 
   return {
     perform() {
-      runtime.writeBuffer(timeBuffer, Date.now() % 100000);
-      runtime.writeBuffer(randomSeedPrimerBuffer, Math.random());
-      runtime.writeBuffer(layersBuffer, store.get(accumulatedLayersAtom));
-      camera.update(runtime);
+      randomSeedPrimerBuffer.write(Math.random());
+      layersBuffer.write(store.get(accumulatedLayersAtom));
+      camera.update();
 
-      const mainBindGroup = runtime.device.createBindGroup({
-        label: `${LABEL} - Main Bind Group`,
-        layout: mainBindGroupLayout,
-        entries: [
-          {
-            binding: 0,
-            resource: renderQuarter
-              ? gBuffer.inQuarterView
-              : gBuffer.inRawRenderView,
-          },
-          {
-            binding: 1,
-            resource: renderQuarter
-              ? gBuffer.outQuarterView
-              : gBuffer.outRawRenderView,
-          },
-        ],
+      const mainBindGroup = mainLayout.populate({
+        previousRender: renderQuarter
+          ? gBuffer.inQuarterView
+          : gBuffer.inRawRenderView,
+        mainOutput: renderQuarter
+          ? gBuffer.outQuarterView
+          : gBuffer.outRawRenderView,
       });
 
-      mainPipeline.execute({
-        workgroups: [
-          Math.ceil(mainPassSize[0] / blockDim),
-          Math.ceil(mainPassSize[1] / blockDim),
-        ],
-        externalBindGroups: [mainBindGroup],
-      });
+      mainPipeline
+        .with(mainLayout, mainBindGroup)
+        .dispatchWorkgroups(
+          Math.ceil(mainPassSize[0] / BlockSize),
+          Math.ceil(mainPassSize[1] / BlockSize),
+        );
 
-      auxPipeline.execute({
-        workgroups: [
-          Math.ceil(gBuffer.size[0] / blockDim),
-          Math.ceil(gBuffer.size[1] / blockDim),
-        ],
-        externalBindGroups: [auxBindGroup],
-      });
+      auxPipeline.dispatchWorkgroups(
+        Math.ceil(gBuffer.size[0] / BlockSize),
+        Math.ceil(gBuffer.size[1] / BlockSize),
+      );
     },
   };
 };

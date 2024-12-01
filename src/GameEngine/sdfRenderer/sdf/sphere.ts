@@ -1,4 +1,4 @@
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 
 export const sphere = wgsl.fn`(pos: vec3f, origin: vec3f, radius: f32) -> f32 {
   return distance(pos, origin) - radius;

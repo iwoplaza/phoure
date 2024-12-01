@@ -1,4 +1,4 @@
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 import { clamp01 } from './macros';
 
 export const lineSegment2 = wgsl.fn`(p: vec2f, a: vec2f, b: vec2f) -> f32 {

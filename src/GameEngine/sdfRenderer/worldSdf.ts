@@ -1,34 +1,27 @@
-import { wgsl } from 'typegpu';
-import { f32, bool, struct, vec3f } from 'typegpu/data';
+import tgpu, { wgsl } from 'typegpu/experimental';
+import * as d from 'typegpu/data';
 import { sdf } from './sdf';
 
-export const RenderTargetWidth = wgsl.slot().$name('render_target_width');
-export const RenderTargetHeight = wgsl.slot().$name('render_target_height');
-export const timeBuffer = wgsl.buffer(f32).$name('time').$allowUniform();
-export const timeUniform = timeBuffer.asUniform();
-export const randomSeedPrimerBuffer = wgsl
-  .buffer(f32)
-  .$name('random_seed_primer')
-  .$allowUniform();
-export const randomSeedPrimerUniform = randomSeedPrimerBuffer
-  .$name('random_seed_primer')
-  .asUniform();
-
-export const ShapeContext = struct({
-  ray_pos: vec3f,
-  ray_dir: vec3f,
-  ray_distance: f32,
-}).$name('shape_context');
-
-export const Material = struct({
-  albedo: vec3f,
-  roughness: f32,
-  emissive: bool,
+export const ShapeContext = d.struct({
+  ray_pos: d.vec3f,
+  ray_dir: d.vec3f,
+  ray_distance: d.f32,
 });
 
-export const surfaceDist = wgsl.fn`(ctx: ${ShapeContext}) -> f32 {
-  return 0.001;
-}`;
+export const Material = d.struct({
+  albedo: d.vec3f,
+  roughness: d.f32,
+  emissive: d.bool,
+});
+
+// const getTime = wgsl.slot<TgpuFn<[], F32>>();
+
+export const surfaceDist = tgpu
+  .fn([ShapeContext], d.f32)
+  .does(`(ctx: ShapeContext) -> f32 {
+    return 0.001;
+  }`)
+  .$uses({ ShapeContext });
 
 const objLeftBlob = wgsl.fn`(pos: vec3f) -> f32 {
   return ${sdf.sphere}(pos, vec3(-0.3, -0.2, 0.), 0.2);

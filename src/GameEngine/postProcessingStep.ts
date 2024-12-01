@@ -1,38 +1,41 @@
-import { vec2f } from 'typegpu/data';
-import { builtin, wgsl, type TypeGpuRuntime } from 'typegpu';
+import * as d from 'typegpu/data';
+import tgpu, { builtin, type ExperimentalTgpuRoot } from 'typegpu/experimental';
 
 import type { GBuffer } from '../gBuffer';
-import { fullScreenQuadVertexShader } from '../shaders/fullScreenQuad';
+import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';
 
 type Options = {
-  runtime: TypeGpuRuntime;
+  root: ExperimentalTgpuRoot;
   context: GPUCanvasContext;
   presentationFormat: GPUTextureFormat;
   gBuffer: GBuffer;
 };
 
-const canvasSizeBuffer = wgsl
-  .buffer(vec2f)
-  .$name('canvas_size')
-  .$allowUniform();
+const layout = tgpu
+  .bindGroupLayout({
+    sourceTexture: { texture: 'float' },
+  })
+  .$name('Post Processing - Bind Group Layout');
 
-const mainFragFn = wgsl.fn`(coord_f: vec4f) -> vec4f {
-  var coord = vec2u(floor(coord_f.xy));
+const mainFragFn = tgpu
+  .fragmentFn({ pos: builtin.position, uv: d.vec2f }, d.vec4f)
+  .does(`(@builtin(position) coord_f: vec4f) -> @location(0) vec4f {
+    var coord = vec2u(floor(coord_f.xy));
 
-  let color = textureLoad(
-    sourceTexture,
-    coord,
-    0
-  );
+    let color = textureLoad(
+      sourceTexture,
+      coord,
+      0
+    );
 
-  // no post-processing for now
+    // no post-processing for now
 
-  return vec4f(color.rgb, 1.0);
-}
-`;
+    return vec4f(color.rgb, 1.0);
+  }`)
+  .$uses({ sourceTexture: layout.bound.sourceTexture });
 
 export const PostProcessingStep = ({
-  runtime,
+  root,
   context,
   presentationFormat,
   gBuffer,
@@ -46,34 +49,11 @@ export const PostProcessingStep = ({
     storeOp: 'store',
   };
 
-  const externalBindGroupLayout = runtime.device.createBindGroupLayout({
-    label: 'Post Processing - Bind Group Layout',
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: {},
-      },
-    ],
-  });
-
-  const pipeline = runtime.makeRenderPipeline({
-    label: 'Pos Processing Pipeline',
-    vertex: fullScreenQuadVertexShader,
-    fragment: {
-      code: wgsl`
-        ${wgsl.declare`@group(0) @binding(0) var sourceTexture: texture_2d<f32>;`}
-
-        let coord_f = ${builtin.position};
-        return ${mainFragFn}(coord_f);
-      `,
-      target: [{ format: presentationFormat }],
-    },
-    primitive: { topology: 'triangle-list' },
-    externalLayouts: [externalBindGroupLayout],
-  });
-
-  runtime.writeBuffer(canvasSizeBuffer, gBuffer.size);
+  const pipeline = root
+    .withVertex(fullScreenQuadVertexFn, {})
+    .withFragment(mainFragFn, { format: presentationFormat })
+    .createPipeline()
+    .$name('Post Processing Pipeline');
 
   return {
     perform() {
@@ -81,22 +61,14 @@ export const PostProcessingStep = ({
       const textureView = context.getCurrentTexture().createView();
       passColorAttachment.view = textureView;
 
-      const externalBindGroup = runtime.device.createBindGroup({
-        label: 'Post Processing - Bind Group',
-        layout: externalBindGroupLayout,
-        entries: [
-          {
-            binding: 0,
-            resource: gBuffer.outRawRenderView,
-          },
-        ],
+      const externalBindGroup = layout.populate({
+        sourceTexture: gBuffer.outRawRenderView,
       });
 
-      pipeline.execute({
-        vertexCount: 6,
-        colorAttachments: [passColorAttachment],
-        externalBindGroups: [externalBindGroup],
-      });
+      pipeline
+        .with(layout, externalBindGroup)
+        .withColorAttachment(passColorAttachment)
+        .draw(6);
     },
   };
 };

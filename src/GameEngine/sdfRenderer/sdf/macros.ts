@@ -1,4 +1,4 @@
-import { wgsl, type Wgsl } from 'typegpu';
+import { wgsl, type Wgsl } from 'typegpu/experimental';
 
 export const dd = (code: Wgsl) => wgsl`dot(${code}, ${code})`;
 export const clamp01 = (inner: Wgsl) => wgsl`max(0., min(${inner}, 1.))`;

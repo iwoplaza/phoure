@@ -1,4 +1,4 @@
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 
 export const box2 = wgsl.fn`(p: vec2f, b: vec2f) -> f32 {
   let d = abs(p) - b;

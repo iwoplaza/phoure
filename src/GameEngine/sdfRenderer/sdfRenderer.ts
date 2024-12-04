@@ -23,7 +23,7 @@ import worldSdf, {
   worldMat,
 } from './worldSdf';
 import { ONES_3F } from '../wgslUtils/mathConstants';
-import { MAX_STEPS, MarchResult, march } from './marchSdf';
+import { MAX_STEPS, MarchResult, distThresholdFnSlot, march } from './marchSdf';
 import { convertRgbToY } from './colorUtils';
 import { store } from '@/store';
 import { getViewportSizeSlot } from '../commonSlots';
@@ -48,9 +48,7 @@ const Reflection = d.struct({
 
 export const accumulatedLayersAtom = atom(0);
 
-const marchWithSurfaceDist = march(surfaceDist).$name(
-  'march_with_surface_dist',
-);
+const marchWithSurfaceDist = march.with(distThresholdFnSlot, surfaceDist);
 
 /**
  * Reflecting: 𝑟=𝑑−2(𝑑⋅𝑛)𝑛

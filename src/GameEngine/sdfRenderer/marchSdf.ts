@@ -9,52 +9,52 @@ export const MarchResult = d.struct({
   position: d.vec3f,
 });
 
-// const distThresholdFnSlot = wgsl.slot<TgpuFn<[], typeof ShapeContext>>();
+export const distThresholdFnSlot =
+  wgsl.slot<TgpuFn<[typeof ShapeContext], d.F32>>();
 
-export const march = (distThresholdFn: TgpuFn<[typeof ShapeContext], d.F32>) =>
-  wgsl.fn`(ctx: ptr<function, ${ShapeContext}>, limit: u32, out: ptr<function, ${MarchResult}>) {
-    var pos = (*ctx).ray_pos;
-    var prev_dist = -1.;
-    var min_dist: f32 = ${FAR};
-  
-    var step = 0u;
-    var progress = 0.;
-  
-    for (; step <= limit; step++) {
-      pos = (*ctx).ray_pos + (*ctx).ray_dir * progress;
-      min_dist = ${worldSdf}(pos);
-  
-      // Inside volume?
-      if (min_dist <= 0.) {
-        // No need to check more objects.
-        break;
-      }
-  
-      if (min_dist < ${distThresholdFn}(*ctx) && min_dist < prev_dist) {
-        // No need to check more objects.
-        break;
-      }
-  
-      // march forward safely
-      progress += min_dist;
-      (*ctx).ray_distance += min_dist;
-  
-      if (progress > ${FAR}) {
-        // Stop checking.
-        break;
-      }
-  
-      prev_dist = min_dist;
+export const march = wgsl.fn`(ctx: ptr<function, ${ShapeContext}>, limit: u32, out: ptr<function, ${MarchResult}>) {
+  var pos = (*ctx).ray_pos;
+  var prev_dist = -1.;
+  var min_dist: f32 = ${FAR};
+
+  var step = 0u;
+  var progress = 0.;
+
+  for (; step <= limit; step++) {
+    pos = (*ctx).ray_pos + (*ctx).ray_dir * progress;
+    min_dist = ${worldSdf}(pos);
+
+    // Inside volume?
+    if (min_dist <= 0.) {
+      // No need to check more objects.
+      break;
     }
-  
-    (*out).position = pos;
-  
-    // Not near surface or distance rising?
-    if (min_dist > ${distThresholdFn}(*ctx) * 2. || min_dist > prev_dist) {
-      // Sky
-      (*out).steps = ${MAX_STEPS} + 1u;
-      return;
+
+    if (min_dist < ${distThresholdFnSlot}(*ctx) && min_dist < prev_dist) {
+      // No need to check more objects.
+      break;
     }
-  
-    (*out).steps = step;
-  }`;
+
+    // march forward safely
+    progress += min_dist;
+    (*ctx).ray_distance += min_dist;
+
+    if (progress > ${FAR}) {
+      // Stop checking.
+      break;
+    }
+
+    prev_dist = min_dist;
+  }
+
+  (*out).position = pos;
+
+  // Not near surface or distance rising?
+  if (min_dist > ${distThresholdFnSlot}(*ctx) * 2. || min_dist > prev_dist) {
+    // Sky
+    (*out).steps = ${MAX_STEPS} + 1u;
+    return;
+  }
+
+  (*out).steps = step;
+}`;

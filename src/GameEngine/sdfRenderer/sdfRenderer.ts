@@ -317,6 +317,7 @@ export const SDFRenderer = async (
   const LABEL = 'SDF Renderer';
 
   const mainPassSize = renderQuarter ? gBuffer.quarterSize : gBuffer.size;
+  const auxPassSize = gBuffer.size;
 
   const camera = new Camera(root);
 
@@ -341,16 +342,19 @@ export const SDFRenderer = async (
     }`)
     .$uses({ layersUniform });
 
-  const viewportSizeBuffer = root
-    .createBuffer(d.vec2f, d.vec2f(...mainPassSize))
-    .$usage('uniform');
-
-  const myGetViewportSize = tgpu
+  const getMainViewportSize = tgpu
     .fn([], d.vec2f)
     .does(`() -> vec2f {
-      return viewportSize;
+      return vec2f(width, height);
     }`)
-    .$uses({ viewportSize: asUniform(viewportSizeBuffer) });
+    .$uses({ width: mainPassSize[0], height: mainPassSize[1] });
+
+  const getAuxViewportSize = tgpu
+    .fn([], d.vec2f)
+    .does(`() -> vec2f {
+      return vec2f(width, height);
+    }`)
+    .$uses({ width: auxPassSize[0], height: auxPassSize[1] });
 
   const cameraUniform = asUniform(camera.cameraBuffer);
 
@@ -371,7 +375,7 @@ export const SDFRenderer = async (
     .with(getRandomSeedPrimerSlot, myGetRandomSeedPrimer)
     .with(getAccumulatedLayersSlot, myGetAccumulatedLayers)
     .with(getCameraProps, myGetCameraProps)
-    .with(getViewportSizeSlot, myGetViewportSize)
+    .with(getViewportSizeSlot, getMainViewportSize)
     // ---
     .withCompute(mainComputeFn)
     .createPipeline()
@@ -381,7 +385,7 @@ export const SDFRenderer = async (
     // filling slots
     .with(OutputFormat, 'rgba16float')
     .with(getCameraProps, myGetCameraProps)
-    .with(getViewportSizeSlot, myGetViewportSize)
+    .with(getViewportSizeSlot, getAuxViewportSize)
     // ---
     .withCompute(auxComputeFn)
     .createPipeline()

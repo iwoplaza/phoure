@@ -39,7 +39,7 @@ const SUB_SAMPLES = 16;
 const MAX_REFL = 3;
 
 const getRandomSeedPrimerSlot = wgsl.slot<TgpuFn<[], d.F32>>();
-const getAccumulatedLayersSlot = wgsl.slot<TgpuFn<[], d.U32>>();
+const getAccumulatedLayersSlot = wgsl.slot<TgpuFn<[], d.F32>>();
 
 const Reflection = d.struct({
   color: d.vec3f,
@@ -324,7 +324,7 @@ export const SDFRenderer = async (
   const randomSeedPrimerUniform = asUniform(randomSeedPrimerBuffer);
 
   // How many layers (previous renders) are stacked on top of each other to reduce noise.
-  const layersBuffer = root.createBuffer(d.u32).$usage('uniform');
+  const layersBuffer = root.createBuffer(d.f32).$usage('uniform');
   const layersUniform = asUniform(layersBuffer);
 
   const myGetRandomSeedPrimer = tgpu
@@ -335,8 +335,8 @@ export const SDFRenderer = async (
     .$uses({ randomSeedPrimerUniform });
 
   const myGetAccumulatedLayers = tgpu
-    .fn([], d.u32)
-    .does(`() -> u32 {
+    .fn([], d.f32)
+    .does(`() -> f32 {
       return layersUniform;
     }`)
     .$uses({ layersUniform });

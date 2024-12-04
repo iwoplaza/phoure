@@ -109,7 +109,7 @@ const sampleGlobal =
         coord.x) * ${inChannelsSlot}/4 +
         i;
       
-      (*result)[i] = input_buffer[index];
+      (*result)[i] = ${ioLayout.bound.input_buffer}[index];
     }
   }
 }`.$name('sample_global');
@@ -134,9 +134,12 @@ const menderConvolveFn = convolveFn({
 const entryComputeFn = tgpu
   .computeFn([], { workgroupSize: [BLOCK_SIZE, BLOCK_SIZE] })
   .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    var result = biases;
+    var result: array<f32, OUT_CHANNELS>;
+    for (var i = 0; i < OUT_CHANNELS; i += 1) {
+      result[i] = biases[i];
+    }
 
-    menderConvolveFn(coord.xy, &result);
+    menderConvolveFn(gid.xy, &result);
   
     if (reluSlot) {
       applyReLU(&result);
@@ -145,10 +148,10 @@ const entryComputeFn = tgpu
     let canvasSize = getViewportSizeSlot();
   
     let output_buffer_begin =
-      (coord.y * u32(canvasSize.x) +
-      coord.x) * outChannelsSlot;
+      (gid.y * u32(canvasSize.x) +
+      gid.x) * OUT_CHANNELS;
   
-    for (var i: u32 = 0; i < outChannelsSlot; i++) {
+    for (var i: u32 = 0; i < OUT_CHANNELS; i++) {
       output_buffer[output_buffer_begin + i] = result[i];
     }
   }`)
@@ -158,7 +161,8 @@ const entryComputeFn = tgpu
     applyReLU,
     biases,
     getViewportSizeSlot,
-    outChannelsSlot,
+    output_buffer: ioLayout.bound.output_buffer,
+    OUT_CHANNELS: outChannelsSlot,
   });
 
 export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {

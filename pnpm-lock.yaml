@@ -45,8 +45,8 @@ dependencies:
     specifier: ^1.0.7
     version: 1.0.7(tailwindcss@3.4.10)
   typegpu:
-    specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/12b4820a/typegpu
-    version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/12b4820a/typegpu'
+    specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/6441ebb2/typegpu
+    version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/6441ebb2/typegpu'
   wgpu-matrix:
     specifier: ^3.3.0
     version: 3.3.0
@@ -4089,8 +4089,8 @@ packages:
       possible-typed-array-names: 1.0.0
     dev: true
 
-  /typed-binary@4.0.1:
-    resolution: {integrity: sha512-nne2iMvXX8Qi3KI7do55udYsPNIUr7zFhPJNdWpujkWUzr6sJK6gQjCUcZGMM6+lws75oiFtGk8if6S2KgWppg==}
+  /typed-binary@4.2.0:
+    resolution: {integrity: sha512-K8lXyQUAk095YkIkFqV929+epoQqxB0lsx9TBd1mb79565eVWXIRa7emCArRajH+g5nYa3t/ZoaSQIl0RDQMsQ==}
     dev: false
 
   /typescript@5.5.4:
@@ -4406,12 +4406,12 @@ packages:
     engines: {node: '>=12.20'}
     dev: true
 
-  '@pkg.csb.dev/software-mansion/TypeGPU/commit/12b4820a/typegpu':
-    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/12b4820a/typegpu}
+  '@pkg.csb.dev/software-mansion/TypeGPU/commit/6441ebb2/typegpu':
+    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/6441ebb2/typegpu}
     name: typegpu
     version: 0.2.0
     engines: {node: '>=12.20.0'}
     dependencies:
       tinyest: 0.0.0
-      typed-binary: 4.0.1
+      typed-binary: 4.2.0
     dev: false

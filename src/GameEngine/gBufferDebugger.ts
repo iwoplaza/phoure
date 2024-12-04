@@ -17,7 +17,7 @@ const CHANNEL_COLOR = 1;
 const CHANNEL_ALBEDO = 2;
 const CHANNEL_NORMAL = 3;
 
-const getChannelModeSlot = wgsl.slot<TgpuFn<[], d.I32>>();
+const getChannelModeSlot = wgsl.slot<TgpuFn<[], d.U32>>();
 
 const layout = tgpu.bindGroupLayout({
   blurredTex: { texture: 'unfilterable-float' },
@@ -26,7 +26,7 @@ const layout = tgpu.bindGroupLayout({
 
 const mainFragFn = tgpu
   .fragmentFn({ pos: builtin.position, uv: d.vec2f }, d.vec4f)
-  .does(/* wgsl */ `(@builtin(position) coord_f: vec4f, @location(0) uv: vec2f) -> vec4f {
+  .does(/* wgsl */ `(@builtin(position) coord_f: vec4f, @location(0) uv: vec2f) -> @location(0) vec4f {
     let coord = vec2<i32>(floor(coord_f.xy));
     let channel_mode = getChannelModeSlot();
 
@@ -125,8 +125,8 @@ export function makeGBufferDebugger(
   const channelModeUniform = asUniform(channelModeBuffer);
 
   const myGetChannelMode = tgpu
-    .fn([], d.i32)
-    .does(`() -> i32 {
+    .fn([], d.u32)
+    .does(`() -> u32 {
       return channelModeUniform;
     }`)
     .$uses({ channelModeUniform });

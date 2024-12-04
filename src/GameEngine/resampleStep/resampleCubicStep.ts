@@ -60,6 +60,7 @@ const resampleCubic = tgpu
     getTexelSizeYSlot,
     getViewportSizeSlot,
     hgLookup: externalLayout.bound.hgLookup,
+    texture: externalLayout.bound.texture,
     wrappingSampler: externalLayout.bound.wrappingSampler,
     clampingSampler: externalLayout.bound.clampingSampler,
   });
@@ -190,7 +191,7 @@ export const ResampleStep = ({
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(resampleCubic, { format: targetFormat })
     .createPipeline()
-    .$name('Resample Pipeline');
+    .$name('Resample (cubic) Pipeline');
 
   const passColorAttachment: GPURenderPassColorAttachment = {
     view: targetTexture,

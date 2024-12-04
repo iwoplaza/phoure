@@ -18,31 +18,39 @@ export const Material = d.struct({
 
 export const surfaceDist = tgpu
   .fn([ShapeContext], d.f32)
-  .does(`(ctx: ShapeContext) -> f32 {
+  .does(/* wgsl */ `(ctx: ShapeContext) -> f32 {
     return 0.001;
   }`)
   .$uses({ ShapeContext });
 
-const objLeftBlob = wgsl.fn`(pos: vec3f) -> f32 {
-  return ${sdf.sphere}(pos, vec3(-0.3, -0.2, 0.), 0.2);
-}`.$name('obj_left_blob');
+const objSdfShell = tgpu.fn([d.vec3f], d.f32);
+
+const objLeftBlob = objSdfShell
+  .does(/* wgsl */ `(pos: vec3f) -> f32 {
+    return sphere(pos, vec3(-0.3, -0.2, 0.), 0.2);
+  }`)
+  .$uses({ sphere: sdf.sphere });
 
 // ANIMATED LIGHT
 // const objCenterBlob = wgsl.fn`(pos: vec3f) -> f32 {
 //   return ${sdf.sphere}(pos, vec3(-0.3, 0.7 + sin(${timeUniform} * 0.001) * 0.4, -2.), 0.2);
 // }`.$name('obj_center_blob');
 
-const objCenterBlob = wgsl.fn`(pos: vec3f) -> f32 {
-  return ${sdf.sphere}(pos, vec3(-0.3, 0.4, 0.4), 0.2);
-}`.$name('obj_center_blob');
+const objCenterBlob = objSdfShell
+  .does(/* wgsl */ `(pos: vec3f) -> f32 {
+    return sphere(pos, vec3(-0.3, 0.4, 0.4), 0.2);
+  }`)
+  .$uses({ sphere: sdf.sphere });
 
-const objRightBlob = wgsl.fn`(pos: vec3f) -> f32 {
-  return ${sdf.sphere}(pos, vec3(0.4, 0.2, 0.), 0.4);
-}`;
+const objRightBlob = objSdfShell
+  .does(/* wgsl */ `(pos: vec3f) -> f32 {
+    return sphere(pos, vec3(0.4, 0.2, 0.), 0.4);
+  }`)
+  .$uses({ sphere: sdf.sphere });
 
-const objFloor = wgsl.fn`(pos: vec3f) -> f32 {
+const objFloor = objSdfShell.does(/* wgsl */ `(pos: vec3f) -> f32 {
   return pos.y + 0.3;
-}`;
+}`);
 
 // biome-ignore format:
 const matFloor = wgsl.fn`(pos: vec3f, mtr: ptr<function, ${Material}>) {
@@ -53,22 +61,25 @@ const matFloor = wgsl.fn`(pos: vec3f, mtr: ptr<function, ${Material}>) {
   (*mtr).roughness = 0.9;
 }`.$name('mat_floor');
 
-export const FAR = wgsl.constant('100.');
+export const FAR = 100;
 
-export const worldSdf = wgsl.fn`(pos: vec3f) -> f32 {
-  var min_dist = ${FAR};
+export const worldSdf = tgpu
+  .fn([d.vec3f], d.f32)
+  .does(/* wgsl */ `(pos: vec3f) -> f32 {
+    var min_dist: f32 = FAR;
 
-  min_dist = min(min_dist, ${objLeftBlob}(pos));
-  min_dist = min(min_dist, ${objCenterBlob}(pos));
-  min_dist = min(min_dist, ${objRightBlob}(pos));
-  min_dist = min(min_dist, ${objFloor}(pos));
+    min_dist = min(min_dist, objLeftBlob(pos));
+    min_dist = min(min_dist, objCenterBlob(pos));
+    min_dist = min(min_dist, objRightBlob(pos));
+    min_dist = min(min_dist, objFloor(pos));
 
-  return min_dist;
-}`.$name('world_sdf');
+    return min_dist;
+  }`)
+  .$uses({ FAR, objLeftBlob, objCenterBlob, objRightBlob, objFloor });
 
 // MATERIALS
 
-export const skyColor = wgsl.fn`(dir: vec3f) -> vec3f {
+export const skyColor = tgpu.fn([d.vec3f], d.vec3f).does(/* wgsl */ `(dir: vec3f) -> vec3f {
   let t = pow(min(abs(dir.y) * 4, 1.), 0.4);
   
   let uv = floor(30.0 * dir.xy);
@@ -79,7 +90,7 @@ export const skyColor = wgsl.fn`(dir: vec3f) -> vec3f {
     vec3f(0.35, 0.4, 0.6),
     t,
   );
-}`.$name('sky_color');
+}`);
 
 export const worldMat =
   wgsl.fn`(pos: vec3f, ctx: ${ShapeContext}, out: ptr<function, ${Material}>) {

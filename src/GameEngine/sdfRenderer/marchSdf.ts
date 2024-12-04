@@ -15,7 +15,7 @@ export const march = (distThresholdFn: TgpuFn<[typeof ShapeContext], d.F32>) =>
   wgsl.fn`(ctx: ptr<function, ${ShapeContext}>, limit: u32, out: ptr<function, ${MarchResult}>) {
     var pos = (*ctx).ray_pos;
     var prev_dist = -1.;
-    var min_dist = ${FAR};
+    var min_dist: f32 = ${FAR};
   
     var step = 0u;
     var progress = 0.;

@@ -12,7 +12,10 @@ import {
 import { makeGBufferDebugger } from './gBufferDebugger';
 import { PostProcessingStep } from './postProcessingStep';
 import { ResampleStep } from './resampleStep/resampleCubicStep';
-import { accumulatedLayersAtom, SDFRenderer } from './sdfRenderer/sdfRenderer';
+import {
+  accumulatedLayersAtom,
+  createSDFRenderer,
+} from './sdfRenderer/sdfRenderer';
 import { PerformanceManager } from '@/PerformanceManager';
 
 class AlreadyDestroyedError extends Error {
@@ -80,11 +83,15 @@ export const GameEngine = (
     const gBuffer = new GBuffer(root, [targetResolution, targetResolution]);
     console.log(`Rendering a ${gBuffer.size[0]} by ${gBuffer.size[1]} image`);
 
-    let sdfRenderer: Awaited<ReturnType<typeof SDFRenderer>>;
-    let traditionalSdfRenderer: Awaited<ReturnType<typeof SDFRenderer>>;
+    let sdfRenderer: ReturnType<typeof createSDFRenderer>;
+    let traditionalSdfRenderer: ReturnType<typeof createSDFRenderer>;
     try {
-      sdfRenderer = await SDFRenderer(root, gBuffer, true);
-      traditionalSdfRenderer = await SDFRenderer(root, gBuffer, false);
+      sdfRenderer = createSDFRenderer({
+        root,
+        gBuffer,
+        quarterResolution: true,
+      });
+      traditionalSdfRenderer = createSDFRenderer({ root, gBuffer });
     } catch (err) {
       console.error('Failed to initialize SDF renderers.');
       throw err;

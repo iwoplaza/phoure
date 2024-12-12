@@ -45,8 +45,8 @@ dependencies:
     specifier: ^1.0.7
     version: 1.0.7(tailwindcss@3.4.10)
   typegpu:
-    specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/6441ebb2/typegpu
-    version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/6441ebb2/typegpu'
+    specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/d2e2a05c/typegpu
+    version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/d2e2a05c/typegpu'
   wgpu-matrix:
     specifier: ^3.3.0
     version: 3.3.0
@@ -4406,10 +4406,10 @@ packages:
     engines: {node: '>=12.20'}
     dev: true
 
-  '@pkg.csb.dev/software-mansion/TypeGPU/commit/6441ebb2/typegpu':
-    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/6441ebb2/typegpu}
+  '@pkg.csb.dev/software-mansion/TypeGPU/commit/d2e2a05c/typegpu':
+    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/d2e2a05c/typegpu}
     name: typegpu
-    version: 0.2.0
+    version: 0.3.0-alpha.4
     engines: {node: '>=12.20.0'}
     dependencies:
       tinyest: 0.0.0

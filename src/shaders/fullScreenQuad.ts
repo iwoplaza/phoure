@@ -1,8 +1,9 @@
-import { builtin, wgsl } from 'typegpu';
-import { vec2f } from 'typegpu/data/index';
+import tgpu from 'typegpu/experimental';
+import { builtin, vec2f } from 'typegpu/data';
 
-export const fullScreenQuadVertexShader = {
-  code: wgsl`
+export const fullScreenQuadVertexFn = tgpu
+  .vertexFn({ idx: builtin.vertexIndex }, { pos: builtin.position, uv: vec2f })
+  .does(/* wgsl */ `(@builtin(vertex_index) idx: u32) -> VertexOutput {
     const SCREEN_RECT = array<vec2f, 6>(
       vec2f(-1.0, -1.0),
       vec2f(1.0, -1.0),
@@ -23,11 +24,8 @@ export const fullScreenQuadVertexShader = {
       vec2f(1.0, 0.0),
     );
 
-    let out_pos = vec4(SCREEN_RECT[${builtin.vertexIndex}], 0.0, 1.0);
-    let vUV: vec2f = UVS[${builtin.vertexIndex}];
-  `,
-  output: {
-    [builtin.position]: 'out_pos',
-    vUV: vec2f,
-  },
-};
+    var output: VertexOutput;
+    output.pos = vec4f(SCREEN_RECT[idx], 0.0, 1.0);
+    output.uv = UVS[idx];
+    return output;
+  }`);

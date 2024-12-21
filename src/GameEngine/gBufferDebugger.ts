@@ -1,60 +1,85 @@
-import { builtin, wgsl, type TypeGpuRuntime } from 'typegpu';
+import * as d from 'typegpu/data';
+import tgpu, {
+  asUniform,
+  type ExperimentalTgpuRoot,
+  type TgpuFn,
+} from 'typegpu/experimental';
 
 import type { GBuffer } from '../gBuffer';
-import { i32, vec2i } from 'typegpu/data';
 import { store } from '@/store';
 import { displayModeAtom } from '@/controlAtoms';
-
-const canvasSizeBuffer = wgsl
-  .buffer(vec2i)
-  .$name('canvas_size')
-  .$allowUniform();
-const canvasSizeUniform = canvasSizeBuffer.asUniform();
+import { fullScreenQuadVertexFn } from '@/shaders/fullScreenQuad';
 
 const CHANNEL_SPLIT = 0;
 const CHANNEL_COLOR = 1;
 const CHANNEL_ALBEDO = 2;
 const CHANNEL_NORMAL = 3;
 
-const channelModeBuffer = wgsl
-  .buffer(i32, CHANNEL_SPLIT)
-  .$name('channel_mode')
-  .$allowUniform();
+const getChannelModeSlot = tgpu.slot<TgpuFn<[], d.U32>>();
 
-const mainFragFn = wgsl.fn`(coord_f: vec4f) -> vec4f {
-  let coord = vec2<i32>(floor(coord_f.xy));
-  let channel_mode = ${channelModeBuffer.asUniform()};
+const layout = tgpu.bindGroupLayout({
+  blurredTex: { texture: 'unfilterable-float' },
+  auxTex: { texture: 'unfilterable-float' },
+});
 
-  let blurred = textureLoad(
-    blurredTex,
-    coord,
-    0
-  );
+const mainFragFn = tgpu
+  .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
+  .does(/* wgsl */ `(@builtin(position) coord_f: vec4f, @location(0) uv: vec2f) -> @location(0) vec4f {
+    let coord = vec2<i32>(floor(coord_f.xy));
+    let channel_mode = getChannelModeSlot();
 
-  let aux = textureLoad(
-    auxTex,
-    coord,
-    0
-  );
+    let blurred = textureLoad(
+      blurredTex,
+      coord,
+      0
+    );
 
-  let normal = vec4(
-    (aux.x + 1.0) * 0.5, // normal.x
-    (aux.y + 1.0) * 0.5, // normal.y
-    0.5,
-    1.0,
-  );
+    let aux = textureLoad(
+      auxTex,
+      coord,
+      0
+    );
 
-  var result: vec4<f32>;
+    let normal = vec4(
+      (aux.x + 1.0) * 0.5, // normal.x
+      (aux.y + 1.0) * 0.5, // normal.y
+      0.5,
+      1.0,
+    );
 
-  let c = coord_f.xy / vec2<f32>(${canvasSizeUniform});
-  if (channel_mode == ${CHANNEL_SPLIT}) {
-    if (c.x < 0.33) {
-      // NORMALS
-      result = normal;
-    }
-    else if (c.x < 0.66) {
-      // ALBEDO_LUMI
+    var result: vec4<f32>;
 
+    let c = uv;
+    if (channel_mode == CHANNEL_SPLIT) {
+      if (c.x < 0.33) {
+        // NORMALS
+        result = normal;
+      }
+      else if (c.x < 0.66) {
+        // ALBEDO_LUMI
+
+        let albedo = aux.z;
+        result = vec4(
+          albedo,
+          albedo,
+          albedo,
+          1.0,
+        );
+      }
+      else {
+        // COLOR
+
+        result = vec4(
+          blurred.rgb,
+          1.0,
+        );
+      }
+    } else if (channel_mode == CHANNEL_COLOR) {
+      result = vec4(
+        blurred.rgb,
+        1.0,
+      );
+    } else if (channel_mode == CHANNEL_ALBEDO) {
       let albedo = aux.z;
       result = vec4(
         albedo,
@@ -62,37 +87,24 @@ const mainFragFn = wgsl.fn`(coord_f: vec4f) -> vec4f {
         albedo,
         1.0,
       );
+    } else if (channel_mode == CHANNEL_NORMAL) {
+      result = normal;
     }
-    else {
-      // COLOR
 
-      result = vec4(
-        blurred.rgb,
-        1.0,
-      );
-    }
-  } else if (channel_mode == ${CHANNEL_COLOR}) {
-    result = vec4(
-      blurred.rgb,
-      1.0,
-    );
-  } else if (channel_mode == ${CHANNEL_ALBEDO}) {
-    let albedo = aux.z;
-    result = vec4(
-      albedo,
-      albedo,
-      albedo,
-      1.0,
-    );
-  } else if (channel_mode == ${CHANNEL_NORMAL}) {
-    result = normal;
-  }
-
-  return result;
-}`;
+    return result;
+  }`)
+  .$uses({
+    blurredTex: layout.bound.blurredTex,
+    auxTex: layout.bound.auxTex,
+    getChannelModeSlot,
+    CHANNEL_SPLIT,
+    CHANNEL_COLOR,
+    CHANNEL_ALBEDO,
+    CHANNEL_NORMAL,
+  });
 
 export function makeGBufferDebugger(
-  runtime: TypeGpuRuntime,
+  root: ExperimentalTgpuRoot,
   presentationFormat: GPUTextureFormat,
   gBuffer: GBuffer,
 ) {
@@ -105,82 +117,33 @@ export function makeGBufferDebugger(
     storeOp: 'store' as const,
   };
 
-  //
-  // SCENE
-  //
+  const channelModeBuffer = root
+    .createBuffer(d.u32, CHANNEL_SPLIT)
+    .$usage('uniform');
+  const channelModeUniform = asUniform(channelModeBuffer);
 
-  const externalBindGroupLayout = runtime.device.createBindGroupLayout({
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: {
-          sampleType: 'unfilterable-float',
-        },
-      },
-      {
-        binding: 1,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: {
-          sampleType: 'unfilterable-float',
-        },
-      },
-    ],
-  });
+  const myGetChannelMode = tgpu
+    .fn([], d.u32)
+    .does(`() -> u32 {
+      return channelModeUniform;
+    }`)
+    .$uses({ channelModeUniform });
 
-  const pipeline = runtime.makeRenderPipeline({
-    label: 'GBuffer Debugger - pipeline',
-    vertex: {
-      code: wgsl`
-        const SCREEN_RECT = array<vec2<f32>, 6>(
-          vec2<f32>(-1.0, -1.0),
-          vec2<f32>(1.0, -1.0),
-          vec2<f32>(-1.0, 1.0),
-
-          vec2<f32>(1.0, -1.0),
-          vec2<f32>(-1.0, 1.0),
-          vec2<f32>(1.0, 1.0),
-        );
-
-        let out_pos = vec4(SCREEN_RECT[${builtin.vertexIndex}], 0.0, 1.0);
-      `,
-      output: {
-        [builtin.position]: 'out_pos',
-      },
-    },
-    fragment: {
-      code: wgsl`
-        ${wgsl.declare`@group(0) @binding(0) var blurredTex: texture_2d<f32>;`}
-        ${wgsl.declare`@group(0) @binding(1) var auxTex: texture_2d<f32>;`}
-
-        let coord_f = ${builtin.position};
-        return ${mainFragFn}(coord_f);
-      `,
-      target: [
-        {
-          format: presentationFormat,
-        },
-      ],
-    },
-    primitive: { topology: 'triangle-list' },
-    externalLayouts: [externalBindGroupLayout],
-  });
-
-  const externalBindGroup = runtime.device.createBindGroup({
-    layout: externalBindGroupLayout,
-    entries: [
-      {
-        binding: 0,
-        resource: gBuffer.upscaledView,
-      },
-      {
-        binding: 1,
-        resource: gBuffer.auxView,
-      },
-    ],
-  });
-
-  runtime.writeBuffer(canvasSizeBuffer, gBuffer.size);
+  const pipeline = root
+    .with(getChannelModeSlot, myGetChannelMode)
+    .withVertex(fullScreenQuadVertexFn, {})
+    .withFragment(mainFragFn, {
+      format: presentationFormat,
+    })
+    .createPipeline()
+    .$name('GBuffer Debugger - pipeline')
+    .with(
+      layout,
+      layout.populate({
+        blurredTex: gBuffer.upscaledView,
+        auxTex: gBuffer.auxView,
+      }),
+    );
 
   return {
     perform(ctx: GPUCanvasContext) {
@@ -197,13 +160,8 @@ export function makeGBufferDebugger(
         channelMode = CHANNEL_NORMAL;
       }
 
-      runtime.writeBuffer(channelModeBuffer, channelMode);
-
-      pipeline.execute({
-        vertexCount: 6,
-        colorAttachments: [passColorAttachment],
-        externalBindGroups: [externalBindGroup],
-      });
+      channelModeBuffer.write(channelMode);
+      pipeline.withColorAttachment(passColorAttachment).draw(6);
     },
   };
 }

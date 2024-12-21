@@ -26,6 +26,7 @@
     "eslint-plugin-n": "^15.0.0",
     "eslint-plugin-promise": "^6.0.0",
     "postcss": "^8.4.24",
+    "rollup-plugin-typegpu": "^0.0.0",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.0.2",
     "vite": "^4.3.9",
@@ -37,6 +38,7 @@
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slider": "^1.2.0",
     "@radix-ui/react-switch": "^1.1.0",
+    "@typegpu/noise": "^0.0.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "jotai": "^2.2.3",
@@ -45,8 +47,7 @@
     "react-dom": "^18.2.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
-    "typed-binary": "^4.0.1",
-    "typegpu": "0.0.0-alpha.4",
-    "wgpu-matrix": "^2.4.2"
+    "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/92de8071/typegpu",
+    "wgpu-matrix": "^3.3.0"
   }
 }

@@ -1,13 +1,13 @@
 export * as macros from './macros';
 
-import { inflateWGSL } from './inflateOperator';
+import { inflate } from './inflateOperator';
 import { revolveX, revolveY, revolveZ } from './revolveOperators';
 import { extrude } from './extrude';
 import { smin } from './sminOperator';
 import { repeatXYZ, repeatXZ } from './repeatOperator';
 
 export const op = {
-  inflate: inflateWGSL,
+  inflate,
   revolveX,
   revolveY,
   revolveZ,

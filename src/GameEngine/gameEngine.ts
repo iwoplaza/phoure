@@ -1,8 +1,8 @@
-import { createRuntime } from 'typegpu';
+import tgpu from 'typegpu/experimental';
 import type { SetStateAction } from 'jotai';
 import { store } from '../store';
 import { GBuffer } from '../gBuffer';
-import { MenderStep } from '../menderStep';
+import { MenderStep } from '../mending/menderStep';
 import {
   autoRotateControlAtom,
   displayModeAtom,
@@ -12,7 +12,10 @@ import {
 import { makeGBufferDebugger } from './gBufferDebugger';
 import { PostProcessingStep } from './postProcessingStep';
 import { ResampleStep } from './resampleStep/resampleCubicStep';
-import { accumulatedLayersAtom, SDFRenderer } from './sdfRenderer/sdfRenderer';
+import {
+  accumulatedLayersAtom,
+  createSDFRenderer,
+} from './sdfRenderer/sdfRenderer';
 import { PerformanceManager } from '@/PerformanceManager';
 
 class AlreadyDestroyedError extends Error {
@@ -65,8 +68,8 @@ export const GameEngine = (
   };
 
   (async () => {
-    const runtime = await createRuntime();
-    addCleanup(() => runtime.dispose());
+    const root = await tgpu.init();
+    addCleanup(() => root.destroy());
 
     const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
@@ -77,21 +80,25 @@ export const GameEngine = (
     canvas.height = targetResolution;
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-    const gBuffer = new GBuffer(runtime, [targetResolution, targetResolution]);
+    const gBuffer = new GBuffer(root, [targetResolution, targetResolution]);
     console.log(`Rendering a ${gBuffer.size[0]} by ${gBuffer.size[1]} image`);
 
-    let sdfRenderer: Awaited<ReturnType<typeof SDFRenderer>>;
-    let traditionalSdfRenderer: Awaited<ReturnType<typeof SDFRenderer>>;
+    let sdfRenderer: ReturnType<typeof createSDFRenderer>;
+    let traditionalSdfRenderer: ReturnType<typeof createSDFRenderer>;
     try {
-      sdfRenderer = await SDFRenderer(runtime, gBuffer, true);
-      traditionalSdfRenderer = await SDFRenderer(runtime, gBuffer, false);
+      sdfRenderer = createSDFRenderer({
+        root,
+        gBuffer,
+        quarterResolution: true,
+      });
+      traditionalSdfRenderer = createSDFRenderer({ root, gBuffer });
     } catch (err) {
       console.error('Failed to initialize SDF renderers.');
       throw err;
     }
 
     const upscaleStep = ResampleStep({
-      runtime,
+      root,
       targetFormat: 'rgba8unorm',
       sourceTexture: () => gBuffer.outQuarterView,
       targetTexture: gBuffer.upscaledView,
@@ -99,26 +106,26 @@ export const GameEngine = (
     });
 
     const menderStep = MenderStep({
-      runtime,
+      root,
       gBuffer,
       targetTexture: () => gBuffer.outRawRenderView,
     });
 
     const gBufferDebugger = makeGBufferDebugger(
-      runtime,
+      root,
       presentationFormat,
       gBuffer,
     );
 
     const postProcessing = PostProcessingStep({
-      runtime,
+      root,
       context,
       gBuffer,
       presentationFormat,
     });
 
     context.configure({
-      device: runtime.device,
+      device: root.device,
       format: presentationFormat,
       alphaMode: 'premultiplied',
     });
@@ -135,7 +142,7 @@ export const GameEngine = (
       // -- Rendering the whole scene & aux.
       if (displayMode === 'traditional') {
         traditionalSdfRenderer.perform();
-        runtime.flush();
+        root.flush();
       }
 
       if (
@@ -146,7 +153,7 @@ export const GameEngine = (
         displayMode === 'upscaled'
       ) {
         sdfRenderer.perform();
-        runtime.flush();
+        root.flush();
       }
 
       // -- Upscaling the quarter-resolution render.
@@ -168,7 +175,7 @@ export const GameEngine = (
         postProcessing.perform();
       }
 
-      runtime.flush();
+      root.flush();
       gBuffer.flip();
       if (store.get(autoRotateControlAtom)) {
         store.set(accumulatedLayersAtom, 0 as SetStateAction<number>);

@@ -1,4 +1,4 @@
-import type { TypeGpuRuntime } from 'typegpu';
+import type { ExperimentalTgpuRoot } from 'typegpu/experimental';
 
 export class GBuffer {
   private quarterATexture: GPUTexture; // used by Mender (odd frames)
@@ -34,12 +34,12 @@ export class GBuffer {
   quarterSize: [number, number];
 
   constructor(
-    runtime: TypeGpuRuntime,
+    root: ExperimentalTgpuRoot,
     private _size: [number, number],
   ) {
     this.quarterSize = [Math.floor(_size[0] / 4), Math.floor(_size[1] / 4)];
 
-    this.quarterATexture = runtime.device.createTexture({
+    this.quarterATexture = root.device.createTexture({
       size: this.quarterSize,
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT |
@@ -48,7 +48,7 @@ export class GBuffer {
       format: 'rgba8unorm',
     });
 
-    this.quarterBTexture = runtime.device.createTexture({
+    this.quarterBTexture = root.device.createTexture({
       size: this.quarterSize,
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT |
@@ -57,14 +57,14 @@ export class GBuffer {
       format: 'rgba8unorm',
     });
 
-    this.upscaledTexture = runtime.device.createTexture({
+    this.upscaledTexture = root.device.createTexture({
       size: this.size,
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
       format: 'rgba8unorm',
     });
 
-    this.rawRenderATexture = runtime.device.createTexture({
+    this.rawRenderATexture = root.device.createTexture({
       size: this.size,
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT |
@@ -73,7 +73,7 @@ export class GBuffer {
       format: 'rgba8unorm',
     });
 
-    this.rawRenderBTexture = runtime.device.createTexture({
+    this.rawRenderBTexture = root.device.createTexture({
       size: this.size,
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT |
@@ -82,7 +82,7 @@ export class GBuffer {
       format: 'rgba8unorm',
     });
 
-    this.auxTexture = runtime.device.createTexture({
+    this.auxTexture = root.device.createTexture({
       size: _size,
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT |

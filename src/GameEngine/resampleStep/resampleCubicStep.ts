@@ -1,54 +1,77 @@
-import { fullScreenQuadVertexShader } from '@/shaders/fullScreenQuad';
-import { wgsl, type TypeGpuRuntime } from 'typegpu';
-import { struct, vec2i, vec2f } from 'typegpu/data';
+import { fullScreenQuadVertexFn } from '@/shaders/fullScreenQuad';
+import tgpu, {
+  asUniform,
+  type TgpuFn,
+  type ExperimentalTgpuRoot,
+} from 'typegpu/experimental';
+import * as d from 'typegpu/data';
+import { getViewportSizeSlot } from '../commonSlots';
 
-const Canvas = struct({
-  size: vec2i,
-  e_x: vec2f, // texel size in x direction
-  e_y: vec2f, // texel size in y direction
-});
+export const getTexelSizeXSlot = tgpu.slot<TgpuFn<[], d.Vec2f>>();
+export const getTexelSizeYSlot = tgpu.slot<TgpuFn<[], d.Vec2f>>();
 
-const canvasBuffer = wgsl.buffer(Canvas).$name('canvas').$allowUniform();
-const canvasUniform = canvasBuffer.asUniform();
+const externalLayout = tgpu
+  .bindGroupLayout({
+    wrappingSampler: { sampler: 'filtering' },
+    clampingSampler: { sampler: 'filtering' },
+    texture: { texture: 'float' },
+    // filter offsets and weights
+    hgLookup: { texture: 'float', viewDimension: '1d' },
+  })
+  .$name('Resample - external bind group layout');
 
 /**
  * Implementation based on:
  * https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-20-fast-third-order-texture-filtering
  */
-const resampleCubic = wgsl.fn`(uv: vec2f) -> vec4f {
-  // calc filter texture coordinates where [0,1] is a single texel
-  // (can be done in vertex program instead)
-  let coord_hg = uv * vec2f(${canvasUniform}.size) - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
-  var hg_x = textureSample(tex_hg, smplr, coord_hg.x).xyz;
-  var hg_y = textureSample(tex_hg, smplr, coord_hg.y).xyz;      // determine linear sampling coordinates
-  var coord_source10 = uv + hg_x.x * ${canvasUniform}.e_x;
-  var coord_source00 = uv - hg_x.y * ${canvasUniform}.e_x;
-  var coord_source11 = coord_source10 + hg_y.x * ${canvasUniform}.e_y;
-  var coord_source01 = coord_source00 + hg_y.x * ${canvasUniform}.e_y;
-  coord_source10 = coord_source10 - hg_y.y * ${canvasUniform}.e_y;
-  coord_source00 = coord_source00 - hg_y.y * ${canvasUniform}.e_y;      // fetch four linearly interpolated inputs
-  var tex_source00 = textureSample(texture, clamping_smplr, coord_source00);
-  var tex_source10 = textureSample(texture, clamping_smplr, coord_source10);
-  var tex_source01 = textureSample(texture, clamping_smplr, coord_source01);
-  var tex_source11 = textureSample(texture, clamping_smplr, coord_source11);      // weight along y direction
-  tex_source00 = mix(tex_source00, tex_source01, hg_y.z);
-  tex_source10 = mix(tex_source10, tex_source11, hg_y.z);      // weight along x direction
-  tex_source00 = mix(tex_source00, tex_source10, hg_x.z);
-  
-  return tex_source00;
-  // Doing linear interpolation for now.
-  // return textureSample(texture, clamping_smplr, uv);
-}`;
+const resampleCubic = tgpu
+  .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
+  .does(/* wgsl */ `(@location(0) uv: vec2f) -> @location(0) vec4f {
+    let texel_size_x = getTexelSizeXSlot();
+    let texel_size_y = getTexelSizeYSlot();
+    let viewport_size = getViewportSizeSlot();
+    // calc filter texture coordinates where [0,1] is a single texel
+    // (can be done in vertex program instead)
+    let coord_hg = uv * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
+    var hg_x = textureSample(hgLookup, wrappingSampler, coord_hg.x).xyz;
+    var hg_y = textureSample(hgLookup, wrappingSampler, coord_hg.y).xyz;      // determine linear sampling coordinates
+    var coord_source10 = uv + hg_x.x * texel_size_x;
+    var coord_source00 = uv - hg_x.y * texel_size_x;
+    var coord_source11 = coord_source10 + hg_y.x * texel_size_y;
+    var coord_source01 = coord_source00 + hg_y.x * texel_size_y;
+    coord_source10 = coord_source10 - hg_y.y * texel_size_y;
+    coord_source00 = coord_source00 - hg_y.y * texel_size_y;      // fetch four linearly interpolated inputs
+    var tex_source00 = textureSample(texture, clampingSampler, coord_source00);
+    var tex_source10 = textureSample(texture, clampingSampler, coord_source10);
+    var tex_source01 = textureSample(texture, clampingSampler, coord_source01);
+    var tex_source11 = textureSample(texture, clampingSampler, coord_source11);      // weight along y direction
+    tex_source00 = mix(tex_source00, tex_source01, hg_y.z);
+    tex_source10 = mix(tex_source10, tex_source11, hg_y.z);      // weight along x direction
+    tex_source00 = mix(tex_source00, tex_source10, hg_x.z);
+    
+    return tex_source00;
+    // Doing linear interpolation for now.
+    // return textureSample(texture, clampingSampler, uv);
+  }`)
+  .$uses({
+    getTexelSizeXSlot,
+    getTexelSizeYSlot,
+    getViewportSizeSlot,
+    hgLookup: externalLayout.bound.hgLookup,
+    texture: externalLayout.bound.texture,
+    wrappingSampler: externalLayout.bound.wrappingSampler,
+    clampingSampler: externalLayout.bound.clampingSampler,
+  });
 
 /**
  * Lookup texture of `h` and `g` functions defined in https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-20-fast-third-order-texture-filtering.
  * @param device
  * @param samples How frequently to sample the continuum. According to the source material, 128 is enough.
  */
-const HGLookupTexture = (runtime: TypeGpuRuntime, samples = 128) => {
+const HGLookupTexture = (root: ExperimentalTgpuRoot, samples = 128) => {
   const textureData = new Uint8Array(samples * 4);
 
-  const texture = runtime.device.createTexture({
+  const texture = root.device.createTexture({
     label: 'HG Lookup Texture',
     format: 'rgba8unorm',
     size: [samples],
@@ -77,7 +100,7 @@ const HGLookupTexture = (runtime: TypeGpuRuntime, samples = 128) => {
     textureData[i * 4 + 3] = Math.floor((w2 + w3) * 255);
   }
 
-  runtime.device.queue.writeTexture(
+  root.device.queue.writeTexture(
     { texture },
     textureData,
     { bytesPerRow: samples * 4 },
@@ -88,7 +111,7 @@ const HGLookupTexture = (runtime: TypeGpuRuntime, samples = 128) => {
 };
 
 type Options = {
-  runtime: TypeGpuRuntime;
+  root: ExperimentalTgpuRoot;
   targetFormat: GPUTextureFormat;
   sourceTexture: () => GPUTextureView;
   targetTexture: GPUTextureView;
@@ -96,55 +119,15 @@ type Options = {
 };
 
 export const ResampleStep = ({
-  runtime,
+  root,
   targetFormat,
   sourceTexture,
   targetTexture,
   sourceSize,
 }: Options) => {
-  const hgLookupTexture = HGLookupTexture(runtime);
+  const hgLookupTexture = HGLookupTexture(root);
 
-  const externalBindGroupLayout = runtime.device.createBindGroupLayout({
-    label: 'Resample - external bind group layout',
-    entries: [
-      // wrapping_sampler
-      {
-        binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
-        sampler: {
-          type: 'filtering',
-        },
-      },
-      // clamping_sampler
-      {
-        binding: 1,
-        visibility: GPUShaderStage.FRAGMENT,
-        sampler: {
-          type: 'filtering',
-        },
-      },
-      // texture
-      {
-        binding: 2,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: {
-          viewDimension: '2d',
-          sampleType: 'float',
-        },
-      },
-      // tex_hg
-      {
-        binding: 3,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: {
-          viewDimension: '1d',
-          sampleType: 'float',
-        },
-      },
-    ],
-  });
-
-  const wrappingSampler = runtime.device.createSampler({
+  const wrappingSampler = root.device.createSampler({
     label: 'Resample - Wrapping Sampler',
     minFilter: 'linear',
     magFilter: 'linear',
@@ -153,7 +136,7 @@ export const ResampleStep = ({
     addressModeW: 'repeat',
   });
 
-  const clampingSampler = runtime.device.createSampler({
+  const clampingSampler = root.device.createSampler({
     label: 'Resample - Clamping Sampler',
     minFilter: 'linear',
     magFilter: 'linear',
@@ -162,23 +145,51 @@ export const ResampleStep = ({
     addressModeW: 'clamp-to-edge',
   });
 
-  const pipeline = runtime.makeRenderPipeline({
-    label: 'Resample Pipeline',
-    primitive: { topology: 'triangle-list' },
-    vertex: fullScreenQuadVertexShader,
-    fragment: {
-      code: wgsl`
-        ${wgsl.declare`@group(0) @binding(0) var smplr: sampler;`}
-        ${wgsl.declare`@group(0) @binding(1) var clamping_smplr: sampler;`}
-        ${wgsl.declare`@group(0) @binding(2) var texture: texture_2d<f32>; // source texture`}
-        ${wgsl.declare`@group(0) @binding(3) var tex_hg: texture_1d<f32>;  // filter offsets and weights`}
-
-        return ${resampleCubic}(vUV);
-      `,
-      target: [{ format: targetFormat }],
-    },
-    externalLayouts: [externalBindGroupLayout],
+  const ViewportStruct = d.struct({
+    size: d.vec2f,
+    texelSizeX: d.vec2f,
+    texelSizeY: d.vec2f,
   });
+
+  const viewportBuffer = root
+    .createBuffer(ViewportStruct, {
+      size: d.vec2f(sourceSize[0], sourceSize[1]),
+      texelSizeX: d.vec2f(1 / sourceSize[0], 0),
+      texelSizeY: d.vec2f(0, 1 / sourceSize[1]),
+    })
+    .$usage('uniform');
+
+  const viewportUniform = asUniform(viewportBuffer);
+
+  const myGetViewportSize = tgpu
+    .fn([], d.vec2f)
+    .does(`() -> vec2f {
+      return viewportUniform.size;
+    }`)
+    .$uses({ viewportUniform });
+
+  const myGetTexelSizeX = tgpu
+    .fn([], d.vec2f)
+    .does(`() -> vec2f {
+      return viewportUniform.texelSizeX;
+    }`)
+    .$uses({ viewportUniform });
+
+  const myGetTexelSizeY = tgpu
+    .fn([], d.vec2f)
+    .does(`() -> vec2f {
+      return viewportUniform.texelSizeY;
+    }`)
+    .$uses({ viewportUniform });
+
+  const pipeline = root
+    .with(getViewportSizeSlot, myGetViewportSize)
+    .with(getTexelSizeXSlot, myGetTexelSizeX)
+    .with(getTexelSizeYSlot, myGetTexelSizeY)
+    .withVertex(fullScreenQuadVertexFn, {})
+    .withFragment(resampleCubic, { format: targetFormat })
+    .createPipeline()
+    .$name('Resample (cubic) Pipeline');
 
   const passColorAttachment: GPURenderPassColorAttachment = {
     view: targetTexture,
@@ -188,44 +199,27 @@ export const ResampleStep = ({
     storeOp: 'store',
   };
 
-  const canvas = {
-    size: sourceSize,
-    e_x: [1 / sourceSize[0], 0] as [number, number],
-    e_y: [0, 1 / sourceSize[1]] as [number, number],
-  };
-
   const hgLookupView = hgLookupTexture.createView();
 
   return {
     perform() {
-      const externalBindGroup = runtime.device.createBindGroup({
-        layout: externalBindGroupLayout,
-        entries: [
-          {
-            binding: 0,
-            resource: wrappingSampler,
-          },
-          {
-            binding: 1,
-            resource: clampingSampler,
-          },
-          {
-            binding: 2,
-            resource: sourceTexture(),
-          },
-          {
-            binding: 3,
-            resource: hgLookupView,
-          },
-        ],
+      const externalBindGroup = externalLayout.populate({
+        wrappingSampler,
+        clampingSampler,
+        texture: sourceTexture(),
+        hgLookup: hgLookupView,
       });
 
-      runtime.writeBuffer(canvasBuffer, canvas);
-      pipeline.execute({
-        vertexCount: 6,
-        colorAttachments: [passColorAttachment],
-        externalBindGroups: [externalBindGroup],
+      viewportBuffer.write({
+        size: d.vec2f(sourceSize[0], sourceSize[1]),
+        texelSizeX: d.vec2f(1 / sourceSize[0], 0),
+        texelSizeY: d.vec2f(0, 1 / sourceSize[1]),
       });
+
+      pipeline
+        .with(externalLayout, externalBindGroup)
+        .withColorAttachment(passColorAttachment)
+        .draw(6);
     },
   };
 };

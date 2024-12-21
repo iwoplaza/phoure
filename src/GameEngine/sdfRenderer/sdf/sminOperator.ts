@@ -1,10 +1,12 @@
-import { wgsl } from 'typegpu';
+import { f32 } from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
+import { max, abs, min } from 'typegpu/std';
 
 /**
  * polynomial smooth min 2
  * Source: https://iquilezles.org/articles/smin/
  */
-export const smin = wgsl.fn`(a: f32, b: f32, k: f32) -> f32 {
-  let h = max(k - abs(a - b), 0.0) / k;
-  return min(a, b) - h*h*k*(1.0/4.0);
-}`.$name('op_smin_p');
+export const smin = tgpu.fn([f32, f32, f32], f32).does((a, b, k) => {
+  const h = max(k - abs(a - b), 0.0) / k;
+  return min(a, b) - h * h * k * (1.0 / 4.0);
+});

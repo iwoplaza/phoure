@@ -48,8 +48,8 @@ dependencies:
     specifier: ^1.0.7
     version: 1.0.7(tailwindcss@3.4.10)
   typegpu:
-    specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu
-    version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu'
+    specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/92de8071/typegpu
+    version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/92de8071/typegpu'
   wgpu-matrix:
     specifier: ^3.3.0
     version: 3.3.0
@@ -1544,7 +1544,7 @@ packages:
     peerDependencies:
       typegpu: ^0.3.0
     dependencies:
-      typegpu: '@pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu'
+      typegpu: '@pkg.csb.dev/software-mansion/TypeGPU/commit/92de8071/typegpu'
     dev: false
 
   /@types/babel__core@7.20.5:
@@ -4434,8 +4434,8 @@ packages:
     engines: {node: '>=12.20'}
     dev: true
 
-  '@pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu':
-    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu}
+  '@pkg.csb.dev/software-mansion/TypeGPU/commit/92de8071/typegpu':
+    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/92de8071/typegpu}
     name: typegpu
     version: 0.2.0
     engines: {node: '>=12.20.0'}

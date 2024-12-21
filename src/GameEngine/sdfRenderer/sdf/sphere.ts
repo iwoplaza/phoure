@@ -1,10 +1,17 @@
-import { f32, vec3f } from 'typegpu/data';
+import { f32, vec2f, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
+import { length, sub } from 'typegpu/std';
 
-export const sphere = tgpu.fn([vec3f, vec3f, f32]).does(`(pos: vec3f, origin: vec3f, radius: f32) -> f32 {
-  return distance(pos, origin) - radius;
-}`);
+export const sphere = tgpu
+  .fn([vec3f, vec3f, f32], f32)
+  .does((pos, origin, radius) => {
+    // TODO: Use 'distance' here, once it exists in `typegpu/std`
+    return length(sub(pos, origin)) - radius;
+  });
 
-export const circle = tgpu.fn([vec3f, vec3f, f32]).does(`(pos: vec2f, origin: vec2f, radius: f32) -> f32 {
-  return distance(pos, origin) - radius;
-}`);
+export const circle = tgpu
+  .fn([vec2f, vec2f, f32], f32)
+  .does((pos, origin, radius) => {
+    // TODO: Use 'distance' here, once it exists in `typegpu/std`
+    return length(sub(pos, origin)) - radius;
+  });

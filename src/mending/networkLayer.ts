@@ -36,7 +36,7 @@ export function createNetworkLayer(
   }
 
   return {
-    bindGroup: layerLayout.populate({
+    bindGroup: root.createBindGroup(layerLayout, {
       weights: weightsBuffer,
       biases: biasesBuffer,
     }),

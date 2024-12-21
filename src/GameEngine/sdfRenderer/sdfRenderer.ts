@@ -1,10 +1,10 @@
 import { atom } from 'jotai';
 import tgpu, {
   type TgpuFn,
-  wgsl,
   type ExperimentalTgpuRoot,
   asUniform,
 } from 'typegpu/experimental';
+import { rand, DefaultGenerator } from '@typegpu/noise';
 import * as d from 'typegpu/data';
 import type { GBuffer } from '../../gBuffer';
 import {
@@ -14,7 +14,6 @@ import {
   constructRayPos,
   getCameraProps,
 } from './camera';
-import { randOnHemisphere, setupRandomSeed } from '../wgslUtils/random';
 import worldSdf, {
   Material,
   ShapeContext,
@@ -31,15 +30,15 @@ import { getViewportSizeSlot } from '../commonSlots';
 const BlockSize = 8;
 
 // parameters
-const OutputFormat = wgsl.slot().$name('output_format');
+const OutputFormat = tgpu.slot().$name('output_format');
 
 const SUPER_SAMPLES = 4;
 const ONE_OVER_SUPER_SAMPLES = 1 / SUPER_SAMPLES;
 const SUB_SAMPLES = 16;
 const MAX_REFL = 3;
 
-const getRandomSeedPrimerSlot = wgsl.slot<TgpuFn<[], d.F32>>();
-const getAccumulatedLayersSlot = wgsl.slot<TgpuFn<[], d.F32>>();
+const getRandomSeedPrimerSlot = tgpu.slot<TgpuFn<[], d.F32>>();
+const getAccumulatedLayersSlot = tgpu.slot<TgpuFn<[], d.F32>>();
 
 const Reflection = d.struct({
   color: d.vec3f,
@@ -56,19 +55,23 @@ const marchWithSurfaceDist = march.with(distThresholdFnSlot, surfaceDist);
  * @param normal
  * @param mat_roughness
  */
-const reflect = wgsl.fn`(ray_dir: vec3f, normal: vec3f, mat_roughness: f32, out_roughness: ptr<function, f32>) -> vec3f {
-  let slope = dot(ray_dir, normal);
-  let dn2 = 2. * slope;
-  let refl_dir = ray_dir - dn2 * normal;
+const reflect = tgpu
+  .fn([d.vec3f, d.vec3f, d.f32, /* TODO: ptr */ d.f32])
+  .does(`(ray_dir: vec3f, normal: vec3f, mat_roughness: f32, out_roughness: ptr<function, f32>) -> vec3f {
+    let slope = dot(ray_dir, normal);
+    let dn2 = 2. * slope;
+    let refl_dir = ray_dir - dn2 * normal;
 
-  let fresnel = 1. - pow(1. + slope, 16.);
-  let roughness = mat_roughness * fresnel;
-  *out_roughness = roughness;
+    let fresnel = 1. - pow(1. + slope, 16.);
+    let roughness = mat_roughness * fresnel;
+    *out_roughness = roughness;
 
-  var new_ray_dir = ${randOnHemisphere}(normal);
-  new_ray_dir = mix(refl_dir, new_ray_dir, roughness);
-  return normalize(new_ray_dir);
-}`.$name('reflect');
+    var new_ray_dir = randOnHemisphere(normal);
+    new_ray_dir = mix(refl_dir, new_ray_dir, roughness);
+    return normalize(new_ray_dir);
+  }`)
+  .$uses({ randOnHemisphere: rand.onHemisphere })
+  .$name('reflect');
 
 const worldNormals = tgpu
   .fn([d.vec3f, ShapeContext], d.vec3f)
@@ -243,7 +246,7 @@ const mainComputeFn = tgpu
     ONE_OVER_SUPER_SAMPLES,
     previousRender: mainLayout.bound.previousRender,
     mainOutput: mainLayout.bound.mainOutput,
-    setupRandomSeed,
+    setupRandomSeed: DefaultGenerator.seed,
     renderSubPixel,
     getRandomSeedPrimerSlot,
     getAccumulatedLayersSlot,

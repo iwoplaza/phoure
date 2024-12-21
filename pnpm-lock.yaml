@@ -20,6 +20,9 @@ dependencies:
   '@radix-ui/react-switch':
     specifier: ^1.1.0
     version: 1.1.0(@types/react-dom@18.3.0)(@types/react@18.3.4)(react-dom@18.3.1)(react@18.3.1)
+  '@typegpu/noise':
+    specifier: ^0.0.1
+    version: 0.0.1(typegpu@0.2.0)
   class-variance-authority:
     specifier: ^0.7.0
     version: 0.7.0
@@ -45,8 +48,8 @@ dependencies:
     specifier: ^1.0.7
     version: 1.0.7(tailwindcss@3.4.10)
   typegpu:
-    specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/d2e2a05c/typegpu
-    version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/d2e2a05c/typegpu'
+    specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu
+    version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu'
   wgpu-matrix:
     specifier: ^3.3.0
     version: 3.3.0
@@ -94,6 +97,9 @@ devDependencies:
   postcss:
     specifier: ^8.4.24
     version: 8.4.41
+  rollup-plugin-typegpu:
+    specifier: ^0.0.0
+    version: 0.0.0
   tailwindcss:
     specifier: ^3.3.2
     version: 3.4.10
@@ -1532,6 +1538,14 @@ packages:
   /@sinclair/typebox@0.27.8:
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
     dev: true
+
+  /@typegpu/noise@0.0.1(typegpu@0.2.0):
+    resolution: {integrity: sha512-VbVpZ+byaGRjdGNvuce32sCf1BLjcg9N5owMqLYEc895sUI4vzLmv/HuVZHfDuDrrFKyyqQFy2hw/LuG9GcKuQ==}
+    peerDependencies:
+      typegpu: ^0.3.0
+    dependencies:
+      typegpu: '@pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu'
+    dev: false
 
   /@types/babel__core@7.20.5:
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -3681,6 +3695,14 @@ packages:
       glob: 7.2.3
     dev: true
 
+  /rollup-plugin-typegpu@0.0.0:
+    resolution: {integrity: sha512-ZlafYIdPUL7woJS8NdPgovzcCPnyYOTFwUSvRdHhhLqO+QrJnHZKRYDV/W+B+jC5S7Zvokw234iBvYUY2djaKw==}
+    dependencies:
+      estree-walker: 3.0.3
+      magic-string: 0.30.11
+      tinyest-for-wgsl: 0.0.0
+    dev: true
+
   /rollup@3.29.4:
     resolution: {integrity: sha512-oWzmBZwvYrU0iJHtDmhsm662rC15FRXmcjCk1xD771dFDx5jJ02ufAQQTn0etB2emNk4J9EZg/yWKpsn9BWGRw==}
     engines: {node: '>=14.18.0', npm: '>=8.0.0'}
@@ -3986,10 +4008,16 @@ packages:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
     dev: true
 
-  /tinyest@0.0.0:
-    resolution: {integrity: sha512-rCvaLewct/tm5CVLMdoa6xKNHWxT60AwhrmF7mjtkhj8w8VCeAg44NB2bzohEfN1SzfPCSyuB8GMmC/BV2gyjw==}
+  /tinyest-for-wgsl@0.0.0:
+    resolution: {integrity: sha512-n7jbDxxfhvpJTGpILFKjsIqwy3RgRjYxekCa61ZnVO+Wh74LcLJ5Iuo7XLo7hiOMQFg4TXt6U/6OWP8uQit0uw==}
     engines: {node: '>=12.20.0'}
-    dev: false
+    dependencies:
+      tinyest: 0.1.0-alpha.0
+    dev: true
+
+  /tinyest@0.1.0-alpha.0:
+    resolution: {integrity: sha512-jbq88/BGSd+mEXxZ81HdtnCRYYwaNCnF0Wt4hJDxkIRS5bi03N/I29R5l97UcNkgYobMom+AQlB4A1mLtcm1EQ==}
+    engines: {node: '>=12.20.0'}
 
   /tinypool@0.8.4:
     resolution: {integrity: sha512-i11VH5gS6IFeLY3gMBQ00/MmLncVP7JLXOw1vlgkytLmJK7QnEr7NXf0LBdxfmNPAeyetukOk0bOYrJrFGjYJQ==}
@@ -4089,8 +4117,8 @@ packages:
       possible-typed-array-names: 1.0.0
     dev: true
 
-  /typed-binary@4.2.0:
-    resolution: {integrity: sha512-K8lXyQUAk095YkIkFqV929+epoQqxB0lsx9TBd1mb79565eVWXIRa7emCArRajH+g5nYa3t/ZoaSQIl0RDQMsQ==}
+  /typed-binary@4.3.0:
+    resolution: {integrity: sha512-9d6QZfUKcUXegpNl7nKUoyY+nBnS84pB9vGXDmzzMzFf/vW9A9w0IEOpuv/G4LCx+lJX2x6jcJAQub6MlwF+8w==}
     dev: false
 
   /typescript@5.5.4:
@@ -4406,12 +4434,12 @@ packages:
     engines: {node: '>=12.20'}
     dev: true
 
-  '@pkg.csb.dev/software-mansion/TypeGPU/commit/d2e2a05c/typegpu':
-    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/d2e2a05c/typegpu}
+  '@pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu':
+    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/4da96774/typegpu}
     name: typegpu
-    version: 0.3.0-alpha.4
+    version: 0.2.0
     engines: {node: '>=12.20.0'}
     dependencies:
-      tinyest: 0.0.0
-      typed-binary: 4.2.0
+      tinyest: 0.1.0-alpha.0
+      typed-binary: 4.3.0
     dev: false

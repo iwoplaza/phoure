@@ -1,37 +1,24 @@
-import { wgsl } from 'typegpu/experimental';
+import { f32, vec2f, vec3f } from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
+import { length } from 'typegpu/std';
 
 /**
  * @returns 2d coordinates
  */
-export const revolveX = wgsl.fn`(p: vec3f, offset: f32) -> vec2f {
-  return vec2(p.x, length(p.yz) - offset);
-}`.$name('revolve_x');
+export const revolveX = tgpu
+  .fn([vec3f, f32], vec2f)
+  .does((p, offset) => vec2f(p.x, length(p.yz) - offset));
 
 /**
  * @returns 2d coordinates
  */
-export const revolveY = wgsl.fn`(p: vec3f, offset: f32) -> vec2f {
-  return vec2(length(p.xz) - offset, p.y);
-}`.$name('revolve_y');
+export const revolveY = tgpu
+  .fn([vec3f, f32], vec2f)
+  .does((p, offset) => vec2f(length(p.xz) - offset, p.y));
 
 /**
  * @returns 2d coordinates
  */
-export const revolveZ = wgsl.fn`(p: vec3f, offset: f32) -> vec2f {
-  return vec2(p.z, length(p.xy) - offset);
-}`.$name('revolve_z');
-
-// export function revolveX(p: [number, number, number], offset: number) {
-//   const [x, y, z] = p;
-//   return [x, vec2.len([y, z]) - offset];
-// }
-
-// export function revolveY(p: [number, number, number], offset: number) {
-//   const [x, y, z] = p;
-//   return [vec2.len([x, z]) - offset, y];
-// }
-
-// export function revolveZ(p: [number, number, number], offset: number) {
-//   const [x, y, z] = p;
-//   return [z, vec2.len([x, y]) - offset];
-// }
+export const revolveZ = tgpu
+  .fn([vec3f, f32], vec2f)
+  .does((p, offset) => vec2f(p.z, length(p.xy) - offset));

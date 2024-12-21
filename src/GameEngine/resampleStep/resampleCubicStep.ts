@@ -1,16 +1,14 @@
 import { fullScreenQuadVertexFn } from '@/shaders/fullScreenQuad';
 import tgpu, {
   asUniform,
-  builtin,
   type TgpuFn,
-  wgsl,
   type ExperimentalTgpuRoot,
 } from 'typegpu/experimental';
 import * as d from 'typegpu/data';
 import { getViewportSizeSlot } from '../commonSlots';
 
-export const getTexelSizeXSlot = wgsl.slot<TgpuFn<[], d.Vec2f>>();
-export const getTexelSizeYSlot = wgsl.slot<TgpuFn<[], d.Vec2f>>();
+export const getTexelSizeXSlot = tgpu.slot<TgpuFn<[], d.Vec2f>>();
+export const getTexelSizeYSlot = tgpu.slot<TgpuFn<[], d.Vec2f>>();
 
 const externalLayout = tgpu
   .bindGroupLayout({
@@ -27,7 +25,7 @@ const externalLayout = tgpu
  * https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-20-fast-third-order-texture-filtering
  */
 const resampleCubic = tgpu
-  .fragmentFn({ pos: builtin.position, uv: d.vec2f }, d.vec4f)
+  .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
   .does(/* wgsl */ `(@location(0) uv: vec2f) -> @location(0) vec4f {
     let texel_size_x = getTexelSizeXSlot();
     let texel_size_y = getTexelSizeYSlot();

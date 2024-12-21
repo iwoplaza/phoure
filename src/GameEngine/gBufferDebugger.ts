@@ -1,10 +1,8 @@
 import * as d from 'typegpu/data';
 import tgpu, {
   asUniform,
-  builtin,
   type ExperimentalTgpuRoot,
   type TgpuFn,
-  wgsl,
 } from 'typegpu/experimental';
 
 import type { GBuffer } from '../gBuffer';
@@ -17,7 +15,7 @@ const CHANNEL_COLOR = 1;
 const CHANNEL_ALBEDO = 2;
 const CHANNEL_NORMAL = 3;
 
-const getChannelModeSlot = wgsl.slot<TgpuFn<[], d.U32>>();
+const getChannelModeSlot = tgpu.slot<TgpuFn<[], d.U32>>();
 
 const layout = tgpu.bindGroupLayout({
   blurredTex: { texture: 'unfilterable-float' },
@@ -25,7 +23,7 @@ const layout = tgpu.bindGroupLayout({
 });
 
 const mainFragFn = tgpu
-  .fragmentFn({ pos: builtin.position, uv: d.vec2f }, d.vec4f)
+  .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
   .does(/* wgsl */ `(@builtin(position) coord_f: vec4f, @location(0) uv: vec2f) -> @location(0) vec4f {
     let coord = vec2<i32>(floor(coord_f.xy));
     let channel_mode = getChannelModeSlot();

@@ -1,4 +1,4 @@
-import tgpu, { wgsl } from 'typegpu/experimental';
+import tgpu from 'typegpu/experimental';
 import * as d from 'typegpu/data';
 import { sdf } from './sdf';
 
@@ -52,14 +52,17 @@ const objFloor = objSdfShell.does(/* wgsl */ `(pos: vec3f) -> f32 {
   return pos.y + 0.3;
 }`);
 
-// biome-ignore format:
-const matFloor = wgsl.fn`(pos: vec3f, mtr: ptr<function, ${Material}>) {
-  let uv = floor(5.0 * pos.xz);
-  let c = 0.2 + 0.5 * ((uv.x + uv.y) - 2.0 * floor((uv.x + uv.y) / 2.0));
-  
-  (*mtr).albedo = mix(vec3(1., 1., 1.), vec3(0., 0., 0.), c);
-  (*mtr).roughness = 0.9;
-}`.$name('mat_floor');
+const matFloor = tgpu
+  .fn([d.vec3f, /* TODO: ptr */ Material])
+  .does(/* wgsl */ `(pos: vec3f, mtr: ptr<function, Material>) {
+    let uv = floor(5.0 * pos.xz);
+    let c = 0.2 + 0.5 * ((uv.x + uv.y) - 2.0 * floor((uv.x + uv.y) / 2.0));
+    
+    (*mtr).albedo = mix(vec3(1., 1., 1.), vec3(0., 0., 0.), c);
+    (*mtr).roughness = 0.9;
+  }`)
+  .$uses({ Material })
+  .$name('mat_floor');
 
 export const FAR = 100;
 
@@ -92,39 +95,52 @@ export const skyColor = tgpu.fn([d.vec3f], d.vec3f).does(/* wgsl */ `(dir: vec3f
   );
 }`);
 
-export const worldMat =
-  wgsl.fn`(pos: vec3f, ctx: ${ShapeContext}, out: ptr<function, ${Material}>) {
-  let sd = ${surfaceDist}(ctx);
-  let d_left_blob = ${objLeftBlob}(pos);
-  let d_center_blob = ${objCenterBlob}(pos);
-  let d_right_blob = ${objRightBlob}(pos);
-  let d_floor_blob = ${objFloor}(pos);
+export const worldMat = tgpu
+  .fn([d.vec3f, ShapeContext, /* TODO: ptr */ Material])
+  .does(`(pos: vec3f, ctx: ShapeContext, out: ptr<function, Material>) {
+    let sd = surfaceDist(ctx);
+    let d_left_blob = objLeftBlob(pos);
+    let d_center_blob = objCenterBlob(pos);
+    let d_right_blob = objRightBlob(pos);
+    let d_floor_blob = objFloor(pos);
 
-  // defaults
-  (*out).emissive = false;
-  (*out).roughness = 1.;
+    // defaults
+    (*out).emissive = false;
+    (*out).roughness = 1.;
 
-  if (d_left_blob <= sd) {
-    // left blob
-    (*out).albedo = vec3f(0.2, 0.2, 1.);
-    (*out).roughness = 0.95;
-  }
-  else if (d_center_blob <= sd) {
-    // test light
-    (*out).albedo = vec3f(1., 1., 0.5) * 20.;
-    (*out).emissive = true;
-  }
-  else if (d_right_blob <= sd) {
-    (*out).albedo = vec3f(0.5, 0.5, 0.6) * 0.9;
-    (*out).roughness = 0.1;
-  }
-  else if (d_floor_blob <= sd) {
-    ${matFloor}(pos, out);
-  }
-  else {
-    // (*out).albedo = vec3f(0.5, 0.5, 0.2);
-    (*out).albedo = ${skyColor}(ctx.ray_dir);
-  }
-}`.$name('world_mat');
+    if (d_left_blob <= sd) {
+      // left blob
+      (*out).albedo = vec3f(0.2, 0.2, 1.);
+      (*out).roughness = 0.95;
+    }
+    else if (d_center_blob <= sd) {
+      // test light
+      (*out).albedo = vec3f(1., 1., 0.5) * 20.;
+      (*out).emissive = true;
+    }
+    else if (d_right_blob <= sd) {
+      (*out).albedo = vec3f(0.5, 0.5, 0.6) * 0.9;
+      (*out).roughness = 0.1;
+    }
+    else if (d_floor_blob <= sd) {
+      matFloor(pos, out);
+    }
+    else {
+      // (*out).albedo = vec3f(0.5, 0.5, 0.2);
+      (*out).albedo = skyColor(ctx.ray_dir);
+    }
+  }`)
+  .$uses({
+    ShapeContext,
+    Material,
+    surfaceDist,
+    objLeftBlob,
+    objCenterBlob,
+    objRightBlob,
+    objFloor,
+    matFloor,
+    skyColor,
+  })
+  .$name('world_mat');
 
 export default worldSdf;

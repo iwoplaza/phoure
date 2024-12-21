@@ -1,9 +1,7 @@
 import * as d from 'typegpu/data';
 import tgpu, {
   asUniform,
-  wgsl,
   type ExperimentalTgpuRoot,
-  type Wgsl,
 } from 'typegpu/experimental';
 
 import { Model7 } from '../model7';
@@ -11,7 +9,13 @@ import type { GBuffer } from '../gBuffer';
 import { layerLayout, createNetworkLayer } from './networkLayer';
 import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';
 import { convertRgbToY } from '../GameEngine/sdfRenderer/colorUtils';
-import { convolveFn } from '../GameEngine/convolve';
+import {
+  convolveFn,
+  inChannelsQuarter,
+  inChannelsSlot,
+  kernelRadiusSlot,
+  outChannelsSlot,
+} from '../GameEngine/convolve';
 import { combinationEntryFn, combinationLayout } from './combineShader';
 import { getViewportSizeSlot } from '@/GameEngine/commonSlots';
 
@@ -26,14 +30,8 @@ type Options = {
   targetTexture: () => GPUTextureView;
 };
 
-const kernelRadiusSlot = wgsl.slot<number>().$name('kernel_radius');
-/**
- * Has to be divisible by 4
- */
-const inChannelsSlot = wgsl.slot<number>().$name('in_channels');
-const outChannelsSlot = wgsl.slot<number>().$name('out_channels');
-const reluSlot = wgsl.slot<boolean>().$name('relu');
-const inputFromGBufferSlot = wgsl.slot<boolean>().$name('input_from_gbuffer');
+const reluSlot = tgpu.slot<boolean>().$name('relu');
+const inputFromGBufferSlot = tgpu.slot<boolean>().$name('input_from_gbuffer');
 const BLOCK_SIZE = 8;
 
 // const convolveLocalFn = wgsl.fn`(local: vec2u, result: ptr<function, array<f32, ${outChannelsSlot}>>) {
@@ -64,71 +62,93 @@ const ioLayout = tgpu.bindGroupLayout({
   aux_tex: { texture: 'unfilterable-float' },
 });
 
-console.log(ioLayout.bound);
-
 const { weights, biases } = layerLayout.bound;
 
-const sampleGlobal =
-  wgsl.fn`(x: i32, y: i32, result: ptr<function, array<vec4f, ${inChannelsSlot} / 4>>) {
-  let canvasSize = ${getViewportSizeSlot}();
-  let coord = vec2u(
-    u32(max(0, min(x, i32(canvasSize.x) - 1))),
-    u32(max(0, min(y, i32(canvasSize.y) - 1))),
-  );
+const sampleGlobal = tgpu.derived(() => {
+  return tgpu
+    .fn([
+      d.i32,
+      d.i32,
+      /* TODO: ptr */ d.arrayOf(d.vec4f, inChannelsQuarter.value),
+    ])
+    .does(`(x: i32, y: i32, result: ptr<function, array<vec4f, inChannelsQuarter>>) {
+      let canvasSize = getViewportSize();
+      let coord = vec2u(
+        u32(max(0, min(x, i32(canvasSize.x) - 1))),
+        u32(max(0, min(y, i32(canvasSize.y) - 1))),
+      );
 
-  if (${inputFromGBufferSlot}) {
-    let blurred = textureLoad(
-      ${ioLayout.bound.blurred_tex},
-      coord,
-      0
-    );
+      if (inputFromGBufferSlot) {
+        let blurred = textureLoad(
+          blurred_tex,
+          coord,
+          0
+        );
 
-    var aux = textureLoad(
-      ${ioLayout.bound.aux_tex},
-      coord,
-      0
-    );
+        var aux = textureLoad(
+          aux_tex,
+          coord,
+          0
+        );
 
-    (*result)[0] = vec4f(
-      ${convertRgbToY}(blurred.rgb),
-      aux.z, // albedo luminance
-      aux.x, // normal.x
-      aux.y, // normal.y
-    );
-    (*result)[1] = vec4f(
-      aux.w, // emission luminance
-      0,     // zero padding
-      0,     // zero padding
-      0,     // zero padding
-    );
-  }
-  else {
-    for (var i: u32 = 0; i < ${inChannelsSlot} / 4; i++) {
-      let index =
-        (coord.y * u32(canvasSize.x) +
-        coord.x) * ${inChannelsSlot}/4 +
-        i;
-      
-      (*result)[i] = ${ioLayout.bound.input_buffer}[index];
-    }
-  }
-}`.$name('sample_global');
+        (*result)[0] = vec4f(
+          convertRgbToY(blurred.rgb),
+          aux.z, // albedo luminance
+          aux.x, // normal.x
+          aux.y, // normal.y
+        );
+        (*result)[1] = vec4f(
+          aux.w, // emission luminance
+          0,     // zero padding
+          0,     // zero padding
+          0,     // zero padding
+        );
+      }
+      else {
+        for (var i: u32 = 0; i < inChannelsQuarter; i++) {
+          let index =
+            (coord.y * u32(canvasSize.x) +
+            coord.x) * inChannelsQuarter +
+            i;
+          
+          (*result)[i] = input_buffer[index];
+        }
+      }
+    }`)
+    .$uses({
+      inChannelsQuarter,
+      getViewportSize: getViewportSizeSlot,
+      inputFromGBufferSlot,
+      blurred_tex: ioLayout.bound.blurred_tex,
+      aux_tex: ioLayout.bound.aux_tex,
+      input_buffer: ioLayout.bound.input_buffer,
+      convertRgbToY,
+    })
+    .$name('sample_global');
+});
 
-const applyReLU = wgsl.fn`
-  (result: ptr<function, array<f32, ${outChannelsSlot}>>) {
-    for (var i = 0u; i < ${outChannelsSlot}; i++) {
-      (*result)[i] = max(0, (*result)[i]);
-    }
-  }
-`.$name('apply_relu');
+const applyReLU = tgpu.derived(() => {
+  return tgpu
+    .fn([/* TODO: ptr */ d.arrayOf(d.f32, outChannelsSlot.value)])
+    .does(`(result: ptr<function, array<f32, outChannelsSlot>>) {
+      for (var i = 0u; i < outChannelsSlot; i++) {
+        (*result)[i] = max(0, (*result)[i]);
+      }
+    }`)
+    .$uses({ outChannelsSlot })
+    .$name('apply_relu');
+});
+
+const readKernel = tgpu
+  .fn([d.u32], d.vec4f)
+  .does((idx) => {
+    return weights.value[idx];
+  })
+  .$name('readKernel');
 
 const menderConvolveFn = convolveFn({
-  inChannels: inChannelsSlot,
-  outChannels: outChannelsSlot,
-  kernelRadius: kernelRadiusSlot,
-  sampleFiller: (x: Wgsl, y: Wgsl, outSamplePtr: Wgsl) =>
-    wgsl`${sampleGlobal}(${x}, ${y}, ${outSamplePtr});`,
-  kernelReader: (idx: Wgsl) => wgsl`${weights}[${idx}]`,
+  sampleFiller: sampleGlobal,
+  kernelReader: readKernel,
 });
 
 const entryComputeFn = tgpu
@@ -260,21 +280,21 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
   ];
 
   const ioBindGroups = [
-    ioLayout.populate({
+    root.createBindGroup(ioLayout, {
       blurred_tex: gBuffer.upscaledView,
       aux_tex: gBuffer.auxView,
       output_buffer: firstWorkBuffer,
       // biome-ignore lint/suspicious/noExplicitAny: <its fine>
       input_buffer: secondWorkBuffer as any, // <- UNUSED
     }),
-    ioLayout.populate({
+    root.createBindGroup(ioLayout, {
       // biome-ignore lint/suspicious/noExplicitAny: <its fine>
       input_buffer: firstWorkBuffer as any,
       output_buffer: secondWorkBuffer,
       blurred_tex: gBuffer.upscaledView, // <- UNUSED
       aux_tex: gBuffer.auxView, // <- UNUSED
     }),
-    ioLayout.populate({
+    root.createBindGroup(ioLayout, {
       // biome-ignore lint/suspicious/noExplicitAny: <its fine>
       input_buffer: secondWorkBuffer as any,
       output_buffer: mendedResultBuffer,

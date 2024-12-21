@@ -1,7 +1,6 @@
 import { mat4, vec3 } from 'wgpu-matrix';
-import {
+import tgpu, {
   type TgpuFn,
-  wgsl,
   type ExperimentalTgpuRoot,
   type TgpuBuffer,
   type Uniform,
@@ -23,30 +22,37 @@ export const CameraStruct = d.struct({
   field_of_view: d.f32,
 });
 
-export const getCameraProps = wgsl
+export const getCameraProps = tgpu
   .slot<TgpuFn<[], typeof CameraStruct>>()
   .$name('getCameraProps');
 
-export const constructRayPos = wgsl.fn`() -> vec3f {
-  let camera = ${getCameraProps}();
-  return (camera.inv_view_matrix * vec4(0., 0., 0., 1.)).xyz;
-}`.$name('construct_ray_pos');
+export const constructRayPos = tgpu
+  .fn([], d.vec3f)
+  .does(/* wgsl */ `() -> vec3f {
+    let camera = getCameraProps();
+    return (camera.inv_view_matrix * vec4(0., 0., 0., 1.)).xyz;
+  }`)
+  .$uses({ getCameraProps });
 
-export const constructRayDir = wgsl.fn`(coord: vec2f) -> vec3f {
-  let camera = ${getCameraProps}();
-  let viewport_size = ${getViewportSizeSlot}();
-  var view_coords = (coord - viewport_size / 2.) / viewport_size.y; // y in [-0.5, 0.5]
-  view_coords = view_coords * camera.field_of_view;
+export const constructRayDir = tgpu
+  .fn([d.vec2f], d.vec3f)
+  .does(/* wgsl */ `(coord: vec2f) -> vec3f {
+    let camera = getCameraProps();
+    let viewport_size = getViewportSize();
+    var view_coords = (coord - viewport_size / 2.) / viewport_size.y; // y in [-0.5, 0.5]
+    view_coords = view_coords * camera.field_of_view;
 
-  var view_ray_dir = vec3f(
-    view_coords,
-    -0.5,
-  );
-  view_ray_dir.y *= -1.;
-  view_ray_dir = normalize(view_ray_dir);
+    var view_ray_dir = vec3f(
+      view_coords,
+      -0.5,
+    );
+    view_ray_dir.y *= -1.;
+    view_ray_dir = normalize(view_ray_dir);
 
-  return (camera.inv_view_matrix * vec4(view_ray_dir, 0.)).xyz;
-}`.$name('construct_ray_dir');
+    return (camera.inv_view_matrix * vec4(view_ray_dir, 0.)).xyz;
+  }`)
+  .$uses({ getCameraProps, getViewportSize: getViewportSizeSlot })
+  .$name('construct_ray_dir');
 
 export class Camera {
   public readonly cameraBuffer: TgpuBuffer<typeof CameraStruct> & Uniform;

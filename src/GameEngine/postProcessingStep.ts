@@ -1,5 +1,5 @@
 import * as d from 'typegpu/data';
-import tgpu, { builtin, type ExperimentalTgpuRoot } from 'typegpu/experimental';
+import tgpu, { type ExperimentalTgpuRoot } from 'typegpu/experimental';
 
 import type { GBuffer } from '../gBuffer';
 import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';
@@ -18,7 +18,7 @@ const layout = tgpu
   .$name('Post Processing - Bind Group Layout');
 
 const mainFragFn = tgpu
-  .fragmentFn({ pos: builtin.position, uv: d.vec2f }, d.vec4f)
+  .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
   .does(`(@builtin(position) coord_f: vec4f) -> @location(0) vec4f {
     var coord = vec2u(floor(coord_f.xy));
 

@@ -26,6 +26,7 @@ import { MAX_STEPS, MarchResult, distThresholdFnSlot, march } from './marchSdf';
 import { convertRgbToY } from './colorUtils';
 import { store } from '@/store';
 import { getViewportSizeSlot } from '../commonSlots';
+import { normalize, mul } from 'typegpu/std';
 
 const BlockSize = 8;
 
@@ -75,24 +76,28 @@ const reflect = tgpu
 
 const worldNormals = tgpu
   .fn([d.vec3f, ShapeContext], d.vec3f)
-  .does(/* wgsl */ `(point: vec3f, ctx: ShapeContext) -> vec3f {
-    let epsilon = surfaceDist(ctx) * 0.5; // arbitrary - should be smaller than any surface detail in your distance function, but not so small as to get lost in float precision
-    let offX = vec3f(point.x + epsilon, point.y, point.z);
-    let offY = vec3f(point.x, point.y + epsilon, point.z);
-    let offZ = vec3f(point.x, point.y, point.z + epsilon);
-    
-    let centerDistance = worldSdf(point);
-    let xDistance = worldSdf(offX);
-    let yDistance = worldSdf(offY);
-    let zDistance = worldSdf(offZ);
+  .does((point, ctx) => {
+    const epsilon = surfaceDist(ctx) * 0.5; // arbitrary - should be smaller than any surface detail in your distance function, but not so small as to get lost in float precision
+    const offX = d.vec3f(point.x + epsilon, point.y, point.z);
+    const offY = d.vec3f(point.x, point.y + epsilon, point.z);
+    const offZ = d.vec3f(point.x, point.y, point.z + epsilon);
 
-    return normalize(vec3f(
-      (xDistance - centerDistance),
-      (yDistance - centerDistance),
-      (zDistance - centerDistance),
-    ) / epsilon);
-  }`)
-  .$uses({ ShapeContext, surfaceDist, worldSdf });
+    const centerDistance = worldSdf(point);
+    const xDistance = worldSdf(offX);
+    const yDistance = worldSdf(offY);
+    const zDistance = worldSdf(offZ);
+
+    return normalize(
+      mul(
+        1 / epsilon,
+        d.vec3f(
+          xDistance - centerDistance,
+          yDistance - centerDistance,
+          zDistance - centerDistance,
+        ),
+      ),
+    );
+  });
 
 const renderSubPixel = tgpu
   .fn([d.vec2f], d.vec3f)

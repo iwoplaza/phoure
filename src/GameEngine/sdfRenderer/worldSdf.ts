@@ -1,12 +1,7 @@
 import tgpu from 'typegpu/experimental';
 import * as d from 'typegpu/data';
-import { sdf } from './sdf';
-
-export const ShapeContext = d.struct({
-  ray_pos: d.vec3f,
-  ray_dir: d.vec3f,
-  ray_distance: d.f32,
-});
+import { sphere } from '@/lib-sdf';
+import { ShapeContext } from '@/lib-ray-marching';
 
 export const Material = d.struct({
   albedo: d.vec3f,
@@ -16,12 +11,7 @@ export const Material = d.struct({
 
 // const getTime = wgsl.slot<TgpuFn<[], F32>>();
 
-export const surfaceDist = tgpu
-  .fn([ShapeContext], d.f32)
-  .does(/* wgsl */ `(ctx: ShapeContext) -> f32 {
-    return 0.001;
-  }`)
-  .$uses({ ShapeContext });
+export const surfaceDist = tgpu.fn([ShapeContext], d.f32).does((_ctx) => 0.001);
 
 const objSdfShell = tgpu.fn([d.vec3f], d.f32);
 
@@ -29,7 +19,7 @@ const objLeftBlob = objSdfShell
   .does(/* wgsl */ `(pos: vec3f) -> f32 {
     return sphere(pos, vec3(-0.3, -0.2, 0.), 0.2);
   }`)
-  .$uses({ sphere: sdf.sphere });
+  .$uses({ sphere });
 
 // ANIMATED LIGHT
 // const objCenterBlob = wgsl.fn`(pos: vec3f) -> f32 {
@@ -40,13 +30,13 @@ const objCenterBlob = objSdfShell
   .does(/* wgsl */ `(pos: vec3f) -> f32 {
     return sphere(pos, vec3(-0.3, 0.4, 0.4), 0.2);
   }`)
-  .$uses({ sphere: sdf.sphere });
+  .$uses({ sphere });
 
 const objRightBlob = objSdfShell
   .does(/* wgsl */ `(pos: vec3f) -> f32 {
     return sphere(pos, vec3(0.4, 0.2, 0.), 0.4);
   }`)
-  .$uses({ sphere: sdf.sphere });
+  .$uses({ sphere });
 
 const objFloor = objSdfShell.does(/* wgsl */ `(pos: vec3f) -> f32 {
   return pos.y + 0.3;
@@ -127,7 +117,7 @@ export const worldMat = tgpu
     }
     else {
       // (*out).albedo = vec3f(0.5, 0.5, 0.2);
-      (*out).albedo = skyColor(ctx.ray_dir);
+      (*out).albedo = skyColor(ctx.rayDir);
     }
   }`)
   .$uses({
@@ -142,5 +132,3 @@ export const worldMat = tgpu
     skyColor,
   })
   .$name('world_mat');
-
-export default worldSdf;

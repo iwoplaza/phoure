@@ -5,6 +5,7 @@ import tgpu, {
   asUniform,
 } from 'typegpu/experimental';
 import { rand, DefaultGenerator } from '@typegpu/noise';
+import { MarchResult, ShapeContext } from '@/lib-ray-marching';
 import * as d from 'typegpu/data';
 import type { GBuffer } from '../../gBuffer';
 import {
@@ -14,17 +15,17 @@ import {
   constructRayPos,
   getCameraProps,
 } from './camera';
-import worldSdf, {
+import {
   Material,
-  ShapeContext,
   skyColor,
   surfaceDist,
   worldMat,
+  worldSdf,
 } from './worldSdf';
 import { ONES_3F } from '../wgslUtils/mathConstants';
-import { MAX_STEPS, MarchResult, distThresholdFnSlot, march } from './marchSdf';
 import { convertRgbToY } from './colorUtils';
 import { store } from '@/store';
+import { march, MarchParams } from '@/lib-ray-marching';
 import { getViewportSizeSlot } from '../commonSlots';
 import { normalize, mul } from 'typegpu/std';
 
@@ -47,8 +48,6 @@ const Reflection = d.struct({
 });
 
 export const accumulatedLayersAtom = atom(0);
-
-const marchWithSurfaceDist = march.with(distThresholdFnSlot, surfaceDist);
 
 /**
  * Reflecting: 𝑟=𝑑−2(𝑑⋅𝑛)𝑛
@@ -82,10 +81,10 @@ const worldNormals = tgpu
     const offY = d.vec3f(point.x, point.y + epsilon, point.z);
     const offZ = d.vec3f(point.x, point.y, point.z + epsilon);
 
-    const centerDistance = worldSdf(point);
-    const xDistance = worldSdf(offX);
-    const yDistance = worldSdf(offY);
-    const zDistance = worldSdf(offZ);
+    const centerDistance = MarchParams.sampleSdf.value(point);
+    const xDistance = MarchParams.sampleSdf.value(offX);
+    const yDistance = MarchParams.sampleSdf.value(offY);
+    const zDistance = MarchParams.sampleSdf.value(offZ);
 
     return normalize(
       mul(
@@ -105,15 +104,15 @@ const renderSubPixel = tgpu
     // doing the first march before each sub-sample, since the first march result is the same for all of them
 
     var init_shape_ctx: ShapeContext;
-    init_shape_ctx.ray_pos = constructRayPos();
-    init_shape_ctx.ray_dir = constructRayDir(coord);
-    init_shape_ctx.ray_distance = 0.;
+    init_shape_ctx.rayPos = constructRayPos();
+    init_shape_ctx.rayDir = constructRayDir(coord);
+    init_shape_ctx.rayDistance = 0.;
     var init_march_result: MarchResult;
 
-    marchWithSurfaceDist(&init_shape_ctx, MAX_STEPS, &init_march_result);
+    march(&init_shape_ctx, MAX_STEPS, &init_march_result);
 
     if (init_march_result.steps >= MAX_STEPS) {
-      return min(skyColor(init_shape_ctx.ray_dir), ONES_3F);
+      return min(skyColor(init_shape_ctx.rayDir), ONES_3F);
     }
 
     let init_normal = worldNormals(init_march_result.position, init_shape_ctx);
@@ -136,14 +135,14 @@ const renderSubPixel = tgpu
       var refl_count = 0u;
 
       var shape_ctx: ShapeContext;
-      shape_ctx.ray_pos = init_march_result.position;
-      shape_ctx.ray_dir = init_shape_ctx.ray_dir;
-      shape_ctx.ray_distance = init_shape_ctx.ray_distance;
+      shape_ctx.rayPos = init_march_result.position;
+      shape_ctx.rayDir = init_shape_ctx.rayDir;
+      shape_ctx.rayDistance = init_shape_ctx.rayDistance;
 
       for (var refl = 0u; refl < MAX_REFL; refl++) {
         var roughness: f32 = 0.;
-        shape_ctx.ray_dir = reflect(
-          shape_ctx.ray_dir,
+        shape_ctx.rayDir = reflect(
+          shape_ctx.rayDir,
           normal,
           material.roughness,
           &roughness,
@@ -153,17 +152,17 @@ const renderSubPixel = tgpu
         refl_count++;
 
         var march_result: MarchResult;
-        marchWithSurfaceDist(&shape_ctx, MAX_STEPS, &march_result);
-        shape_ctx.ray_pos = march_result.position;
+        march(&shape_ctx, MAX_STEPS, &march_result);
+        shape_ctx.rayPos = march_result.position;
 
         if (march_result.steps >= MAX_STEPS) {
-          emissive_color = skyColor(shape_ctx.ray_dir);
+          emissive_color = skyColor(shape_ctx.rayDir);
           break;
         }
 
-        normal = worldNormals(shape_ctx.ray_pos, shape_ctx);
+        normal = worldNormals(shape_ctx.rayPos, shape_ctx);
 
-        worldMat(shape_ctx.ray_pos, shape_ctx, &material);
+        worldMat(shape_ctx.rayPos, shape_ctx, &material);
 
         if (material.emissive) {
           emissive_color = material.albedo;
@@ -192,7 +191,7 @@ const renderSubPixel = tgpu
   }`)
   .$uses({
     SUB_SAMPLES,
-    MAX_STEPS,
+    MAX_STEPS: MarchParams.maxSteps,
     MAX_REFL,
     ONES_3F,
     MarchResult,
@@ -202,7 +201,7 @@ const renderSubPixel = tgpu
     constructRayPos,
     constructRayDir,
     worldNormals,
-    marchWithSurfaceDist,
+    march,
     skyColor,
     worldMat,
     reflect,
@@ -273,18 +272,18 @@ const auxComputeFn = tgpu
     
     var march_result: MarchResult;
     var shape_ctx: ShapeContext;
-    shape_ctx.ray_pos = constructRayPos();
-    shape_ctx.ray_dir = constructRayDir(
+    shape_ctx.rayPos = constructRayPos();
+    shape_ctx.rayDir = constructRayDir(
       vec2f(GlobalInvocationID.xy) + offset
     );
-    shape_ctx.ray_distance = 0.;
+    shape_ctx.rayDistance = 0.;
   
-    marchWithSurfaceDist(&shape_ctx, MAX_STEPS, &march_result);
+    march(&shape_ctx, MAX_STEPS, &march_result);
   
     var world_normal: vec3f;
   
     if (march_result.steps >= MAX_STEPS) {
-      world_normal = -shape_ctx.ray_dir;
+      world_normal = -shape_ctx.rayDir;
     }
     else {
       world_normal = worldNormals(march_result.position, shape_ctx);
@@ -317,13 +316,13 @@ const auxComputeFn = tgpu
     textureStore(auxOutput, GlobalInvocationID.xy, aux);
   }`)
   .$uses({
-    MAX_STEPS,
+    MAX_STEPS: MarchParams.maxSteps,
     MarchResult,
     ShapeContext,
     Material,
     constructRayPos,
     constructRayDir,
-    marchWithSurfaceDist,
+    march,
     worldNormals,
     worldMat,
     convertRgbToY,
@@ -399,6 +398,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
     .with(getAccumulatedLayersSlot, myGetAccumulatedLayers)
     .with(getCameraProps, myGetCameraProps)
     .with(getViewportSizeSlot, getMainViewportSize)
+    .with(MarchParams.sampleSdf, worldSdf)
     // ---
     .withCompute(mainComputeFn)
     .createPipeline()
@@ -409,6 +409,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
     .with(OutputFormat, 'rgba16float')
     .with(getCameraProps, myGetCameraProps)
     .with(getViewportSizeSlot, getAuxViewportSize)
+    .with(MarchParams.sampleSdf, worldSdf)
     // ---
     .withCompute(auxComputeFn)
     .createPipeline()

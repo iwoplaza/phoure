@@ -26,28 +26,28 @@ const BlockSize = 8;
 const coneMinDistVar = wgsl.var(f32, 0);
 
 const coneDist = wgsl.fn`(ctx: ${ShapeContext} -> f32 {
-  return ${coneMinDistVar} * ctx.ray_distance;
+  return ${coneMinDistVar} * ctx.rayDistance;
 }`.$name('cone_dist');
 
 const marchWithCone = wgsl.fn`(ctx: ptr<function, ShapeContext>, limit: u32) {
   let dir = (*ctx).ray_dir;
-  let start_pos = (*ctx).ray_pos;
+  let start_pos = (*ctx).rayPos;
   
   for (var step = 0u; step <= limit; step++) {
-    if ((*ctx).ray_distance >= ${FAR}) {
+    if ((*ctx).rayDistance >= ${FAR}) {
       // Stop checking.
       return;
     }
 
-    let min_dist = ${worldSdf}(start_pos + (*ctx).ray_distance * dir);
+    let min_dist = ${worldSdf}(start_pos + (*ctx).rayDistance * dir);
 
     // March forward
-    (*ctx).ray_distance += min_dist;
+    (*ctx).rayDistance += min_dist;
 
     // Crossed threshold?
     if (min_dist <= ${coneDist}(*ctx)) {
       // Stop checking.
-      (*ctx).ray_distance -= min_dist; // going back
+      (*ctx).rayDistance -= min_dist; // going back
       return;
     }
   }
@@ -81,9 +81,9 @@ const mainComputeFn = wgsl.fn`(GlobalInvocationID: vec3u) {
 
   var march_result: ${MarchResult};
   var shape_ctx: ${ShapeContext};
-  shape_ctx.ray_pos = ${constructRayPos}();
-  shape_ctx.ray_dir = ${constructRayDir}(vec2f(GlobalInvocationID.xy) + offset);
-  shape_ctx.ray_distance = 0.;
+  shape_ctx.rayPos = ${constructRayPos}();
+  shape_ctx.rayDir = ${constructRayDir}(vec2f(GlobalInvocationID.xy) + offset);
+  shape_ctx.rayDistance = 0.;
 
   // TODO: A very primitive estimation, change for a better approx if needed.
   ${coneMinDistVar} = ${Math.SQRT2} / ${renderTargetSizeSlot}.y;
@@ -93,13 +93,13 @@ const mainComputeFn = wgsl.fn`(GlobalInvocationID: vec3u) {
 
     let prev_idx = u32(GlobalInvocationID.x / 2) + u32(GlobalInvocationID.y / 2 * ${inputBufferSizePlaceholder}.x);
     let prev_dist = ${inputBufferPlaceholder}[prev_idx];
-    shape_ctx.ray_distance = prev_dist;
+    shape_ctx.rayDistance = prev_dist;
   }
   
   ${marchWithCone}(&shape_ctx, MAX_STEPS);
 
   let buffer_offset = GlobalInvocationID.x + GlobalInvocationID.y * ${outputBufferSizePlaceholder}.x;
-  ${outputBufferSlot}[buffer_offset] = shape_ctx.ray_distance;
+  ${outputBufferSlot}[buffer_offset] = shape_ctx.rayDistance;
 }`.$name('main_compute_fn');
 
 export interface CBuffer {

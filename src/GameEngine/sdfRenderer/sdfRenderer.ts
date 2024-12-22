@@ -14,7 +14,7 @@ import {
   constructRayDir,
   constructRayPos,
   getCameraProps,
-} from './camera';
+} from '@/lib-camera';
 import {
   Material,
   skyColor,

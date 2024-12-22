@@ -14,7 +14,7 @@ import {
   cameraYControlAtom,
   cameraZoomControlAtom,
 } from '@/controlAtoms';
-import { getViewportSizeSlot } from '../commonSlots';
+import { getViewportSizeSlot } from '../GameEngine/commonSlots';
 
 export const CameraStruct = d.struct({
   view_matrix: d.mat4x4f,

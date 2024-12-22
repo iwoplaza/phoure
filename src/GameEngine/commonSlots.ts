@@ -1,6 +1,4 @@
-import tgpu, { type TgpuFn } from 'typegpu/experimental';
-import type * as d from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
+import { vec2f } from 'typegpu/data';
 
-export const getViewportSizeSlot = tgpu
-  .slot<TgpuFn<[], d.Vec2f>>()
-  .$name('getViewportSizeSlot');
+export const getViewportSize = tgpu.accessor(vec2f).$name('getViewportSize');

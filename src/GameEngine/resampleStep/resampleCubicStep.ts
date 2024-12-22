@@ -1,14 +1,13 @@
 import { fullScreenQuadVertexFn } from '@/shaders/fullScreenQuad';
 import tgpu, {
   asUniform,
-  type TgpuFn,
   type ExperimentalTgpuRoot,
 } from 'typegpu/experimental';
 import * as d from 'typegpu/data';
-import { getViewportSizeSlot } from '../commonSlots';
+import { getViewportSize } from '../commonSlots';
 
-export const getTexelSizeXSlot = tgpu.slot<TgpuFn<[], d.Vec2f>>();
-export const getTexelSizeYSlot = tgpu.slot<TgpuFn<[], d.Vec2f>>();
+const getTexelSizeX = tgpu.accessor(d.vec2f);
+const getTexelSizeY = tgpu.accessor(d.vec2f);
 
 const externalLayout = tgpu
   .bindGroupLayout({
@@ -27,9 +26,9 @@ const externalLayout = tgpu
 const resampleCubic = tgpu
   .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
   .does(/* wgsl */ `(@location(0) uv: vec2f) -> @location(0) vec4f {
-    let texel_size_x = getTexelSizeXSlot();
-    let texel_size_y = getTexelSizeYSlot();
-    let viewport_size = getViewportSizeSlot();
+    let texel_size_x = getTexelSizeX;
+    let texel_size_y = getTexelSizeY;
+    let viewport_size = getViewportSize;
     // calc filter texture coordinates where [0,1] is a single texel
     // (can be done in vertex program instead)
     let coord_hg = uv * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
@@ -54,9 +53,9 @@ const resampleCubic = tgpu
     // return textureSample(texture, clampingSampler, uv);
   }`)
   .$uses({
-    getTexelSizeXSlot,
-    getTexelSizeYSlot,
-    getViewportSizeSlot,
+    getTexelSizeX,
+    getTexelSizeY,
+    getViewportSize,
     hgLookup: externalLayout.bound.hgLookup,
     texture: externalLayout.bound.texture,
     wrappingSampler: externalLayout.bound.wrappingSampler,
@@ -163,29 +162,20 @@ export const ResampleStep = ({
 
   const myGetViewportSize = tgpu
     .fn([], d.vec2f)
-    .does(`() -> vec2f {
-      return viewportUniform.size;
-    }`)
-    .$uses({ viewportUniform });
+    .does(() => viewportUniform.value.size);
 
   const myGetTexelSizeX = tgpu
     .fn([], d.vec2f)
-    .does(`() -> vec2f {
-      return viewportUniform.texelSizeX;
-    }`)
-    .$uses({ viewportUniform });
+    .does(() => viewportUniform.value.texelSizeX);
 
   const myGetTexelSizeY = tgpu
     .fn([], d.vec2f)
-    .does(`() -> vec2f {
-      return viewportUniform.texelSizeY;
-    }`)
-    .$uses({ viewportUniform });
+    .does(() => viewportUniform.value.texelSizeY);
 
   const pipeline = root
-    .with(getViewportSizeSlot, myGetViewportSize)
-    .with(getTexelSizeXSlot, myGetTexelSizeX)
-    .with(getTexelSizeYSlot, myGetTexelSizeY)
+    .with(getViewportSize, myGetViewportSize)
+    .with(getTexelSizeX, myGetTexelSizeX)
+    .with(getTexelSizeY, myGetTexelSizeY)
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(resampleCubic, { format: targetFormat })
     .createPipeline()

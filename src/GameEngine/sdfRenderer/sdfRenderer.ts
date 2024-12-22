@@ -1,6 +1,5 @@
 import { atom } from 'jotai';
 import tgpu, {
-  type TgpuFn,
   type ExperimentalTgpuRoot,
   asUniform,
 } from 'typegpu/experimental';
@@ -10,7 +9,6 @@ import * as d from 'typegpu/data';
 import type { GBuffer } from '../../gBuffer';
 import {
   Camera,
-  CameraStruct,
   constructRayDir,
   constructRayPos,
   getCameraProps,
@@ -26,7 +24,7 @@ import { ONES_3F } from '../wgslUtils/mathConstants';
 import { convertRgbToY } from './colorUtils';
 import { store } from '@/store';
 import { march, MarchParams } from '@/lib-ray-marching';
-import { getViewportSizeSlot } from '../commonSlots';
+import { getViewportSize } from '../commonSlots';
 import { normalize, mul } from 'typegpu/std';
 
 const BlockSize = 8;
@@ -39,8 +37,8 @@ const ONE_OVER_SUPER_SAMPLES = 1 / SUPER_SAMPLES;
 const SUB_SAMPLES = 16;
 const MAX_REFL = 3;
 
-const getRandomSeedPrimerSlot = tgpu.slot<TgpuFn<[], d.F32>>();
-const getAccumulatedLayersSlot = tgpu.slot<TgpuFn<[], d.F32>>();
+const getRandomSeedPrimer = tgpu.accessor(d.f32);
+const getAccumulatedLayers = tgpu.accessor(d.f32);
 
 const Reflection = d.struct({
   color: d.vec3f,
@@ -215,9 +213,9 @@ const mainLayout = tgpu.bindGroupLayout({
 const mainComputeFn = tgpu
   .computeFn([], { workgroupSize: [BlockSize, BlockSize] })
   .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    setupRandomSeed(vec2f(gid.xy) * ${Math.random()} + getRandomSeedPrimerSlot() * ${Math.random()});
+    setupRandomSeed(vec2f(gid.xy) * ${Math.random()} + getRandomSeedPrimer * ${Math.random()});
 
-    let prev_layers = getAccumulatedLayersSlot();
+    let prev_layers = getAccumulatedLayers;
     let prev_render = textureLoad(previousRender, gid.xy, 0);
   
     var acc = vec3f(0., 0., 0.);
@@ -252,8 +250,8 @@ const mainComputeFn = tgpu
     mainOutput: mainLayout.bound.mainOutput,
     setupRandomSeed: DefaultGenerator.seed,
     renderSubPixel,
-    getRandomSeedPrimerSlot,
-    getAccumulatedLayersSlot,
+    getRandomSeedPrimer,
+    getAccumulatedLayers,
   });
 
 const auxLayout = tgpu
@@ -302,7 +300,7 @@ const auxComputeFn = tgpu
       // emission_luminance = albedo_luminance;
     }
   
-    let camera = getCameraProps();
+    let camera = getCameraProps;
     let view_normal = camera.view_matrix * vec4f(world_normal, 0);
   
     let aux = vec4(
@@ -348,43 +346,6 @@ export function createSDFRenderer(options: SDFRendererOptions) {
   // How many layers (previous renders) are stacked on top of each other to reduce noise.
   const layersBuffer = root.createBuffer(d.f32).$usage('uniform');
 
-  // Resource locators
-
-  const myGetRandomSeedPrimer = tgpu
-    .fn([], d.f32)
-    .does(/* wgsl */ `() -> f32 {
-      return randomSeedPrimer;
-    }`)
-    .$uses({ randomSeedPrimer: asUniform(randomSeedPrimerBuffer) });
-
-  const myGetAccumulatedLayers = tgpu
-    .fn([], d.f32)
-    .does(/* wgsl */ `() -> f32 {
-      return layers;
-    }`)
-    .$uses({ layers: asUniform(layersBuffer) });
-
-  const getMainViewportSize = tgpu
-    .fn([], d.vec2f)
-    .does(/* wgsl */ `() -> vec2f {
-      return vec2f(width, height);
-    }`)
-    .$uses({ width: mainPassSize[0], height: mainPassSize[1] });
-
-  const getAuxViewportSize = tgpu
-    .fn([], d.vec2f)
-    .does(/* wgsl */ `() -> vec2f {
-      return vec2f(width, height);
-    }`)
-    .$uses({ width: auxPassSize[0], height: auxPassSize[1] });
-
-  const myGetCameraProps = tgpu
-    .fn([], CameraStruct)
-    .does(/* wgsl */ `() -> CameraStruct {
-      return camera;
-    }`)
-    .$uses({ CameraStruct, camera: asUniform(camera.cameraBuffer) });
-
   // ---
 
   const auxBindGroup = auxLayout.populate({
@@ -394,10 +355,10 @@ export function createSDFRenderer(options: SDFRendererOptions) {
   const mainPipeline = root
     // filling slots
     .with(OutputFormat, 'rgba8unorm')
-    .with(getRandomSeedPrimerSlot, myGetRandomSeedPrimer)
-    .with(getAccumulatedLayersSlot, myGetAccumulatedLayers)
-    .with(getCameraProps, myGetCameraProps)
-    .with(getViewportSizeSlot, getMainViewportSize)
+    .with(getRandomSeedPrimer, asUniform(randomSeedPrimerBuffer))
+    .with(getAccumulatedLayers, asUniform(layersBuffer))
+    .with(getCameraProps, asUniform(camera.cameraBuffer))
+    .with(getViewportSize, d.vec2f(mainPassSize[0], mainPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---
     .withCompute(mainComputeFn)
@@ -407,8 +368,8 @@ export function createSDFRenderer(options: SDFRendererOptions) {
   const auxPipeline = root
     // filling slots
     .with(OutputFormat, 'rgba16float')
-    .with(getCameraProps, myGetCameraProps)
-    .with(getViewportSizeSlot, getAuxViewportSize)
+    .with(getCameraProps, asUniform(camera.cameraBuffer))
+    .with(getViewportSize, d.vec2f(auxPassSize[0], auxPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---
     .withCompute(auxComputeFn)

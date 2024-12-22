@@ -5,7 +5,12 @@ import typegpu from 'rollup-plugin-typegpu';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), typegpu()],
+  plugins: [
+    react(),
+    typegpu({
+      include: [/\.ts$/],
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

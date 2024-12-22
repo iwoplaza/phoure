@@ -1,4 +1,4 @@
-import { getViewportSizeSlot } from '@/GameEngine/commonSlots';
+import { getViewportSize } from '@/GameEngine/commonSlots';
 import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
@@ -36,7 +36,7 @@ export const combinationEntryFn = tgpu
   
     let blurred_ycbcr = blurred.rgb * rgbToYcbcrMatrix;
   
-    let buffer_idx = coord.y * u32(getViewportSizeSlot().x) + coord.x;
+    let buffer_idx = coord.y * u32(getViewportSize.x) + coord.x;
     let mended_lumi = mendedBuffer[buffer_idx];
   
     let combined_ycbcr = vec3f(
@@ -54,5 +54,5 @@ export const combinationEntryFn = tgpu
     ycbcrToRgbMatrix,
     blurredTexture,
     mendedBuffer,
-    getViewportSizeSlot,
+    getViewportSize,
   });

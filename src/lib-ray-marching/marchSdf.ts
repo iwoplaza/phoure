@@ -5,9 +5,9 @@ import { ShapeContext } from './types';
 const sampleSdfShell = tgpu.fn([vec3f], f32);
 type SampleSdf = ReturnType<(typeof sampleSdfShell)['does']>;
 
-const defaultGetSurfaceThreshold = tgpu.fn([ShapeContext], f32).does((_ctx) => {
-  return 0.001;
-});
+const defaultGetSurfaceThreshold = tgpu
+  .fn([ShapeContext], f32)
+  .does((_ctx) => 0.001);
 
 export const MarchParams = {
   maxSteps: tgpu.slot(500),

@@ -6,7 +6,7 @@ import { convertRgbToY } from '@/lib-color';
 
 import type { GBuffer } from '../gBuffer';
 import { SceneSchema } from '../schema/scene';
-import { NetworkLayer } from '../mending/networkLayer';
+import { NetworkLayer } from '../lib-phoure/networkLayer';
 import { convolveFn } from './convolve';
 
 const blockDim = 8;

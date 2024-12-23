@@ -1,8 +1,10 @@
 import tgpu from 'typegpu/experimental';
 import type { SetStateAction } from 'jotai';
+import { MenderStep } from '@/lib-phoure/menderStep';
+import { BicubicFilter } from '@/lib-filter';
+
 import { store } from '../store';
 import { GBuffer } from '../gBuffer';
-import { MenderStep } from '../mending/menderStep';
 import {
   autoRotateControlAtom,
   displayModeAtom,
@@ -11,7 +13,6 @@ import {
 } from '../controlAtoms';
 import { makeGBufferDebugger } from './gBufferDebugger';
 import { PostProcessingStep } from './postProcessingStep';
-import { BicubicFilter } from '@/lib-filter';
 import {
   accumulatedLayersAtom,
   createSDFRenderer,

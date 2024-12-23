@@ -11,7 +11,7 @@ import {
 } from '../controlAtoms';
 import { makeGBufferDebugger } from './gBufferDebugger';
 import { PostProcessingStep } from './postProcessingStep';
-import { ResampleStep } from './resampleStep/resampleCubicStep';
+import { BicubicFilter } from '@/lib-filter';
 import {
   accumulatedLayersAtom,
   createSDFRenderer,
@@ -97,12 +97,11 @@ export const GameEngine = (
       throw err;
     }
 
-    const upscaleStep = ResampleStep({
+    const upscaleStep = BicubicFilter({
       root,
-      targetFormat: 'rgba8unorm',
       sourceTexture: () => gBuffer.outQuarterView,
       targetTexture: gBuffer.upscaledView,
-      sourceSize: gBuffer.quarterSize,
+      targetFormat: 'rgba8unorm',
     });
 
     const menderStep = MenderStep({

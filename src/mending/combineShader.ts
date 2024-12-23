@@ -2,7 +2,7 @@ import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 import { rgbToYcbcrMatrix, ycbcrToRgbMatrix } from '@/lib-color';
 
-import { getViewportSize } from '@/GameEngine/commonSlots';
+import { accessViewportSize } from '@/lib-common';
 
 export const combinationLayout = tgpu
   .bindGroupLayout({
@@ -26,7 +26,7 @@ export const combinationEntryFn = tgpu
   
     let blurred_ycbcr = blurred.rgb * rgbToYcbcrMatrix;
   
-    let buffer_idx = coord.y * u32(getViewportSize.x) + coord.x;
+    let buffer_idx = coord.y * u32(accessViewportSize.x) + coord.x;
     let mended_lumi = mendedBuffer[buffer_idx];
   
     let combined_ycbcr = vec3f(
@@ -44,5 +44,5 @@ export const combinationEntryFn = tgpu
     ycbcrToRgbMatrix,
     blurredTexture,
     mendedBuffer,
-    getViewportSize,
+    accessViewportSize,
   });

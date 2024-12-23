@@ -3,9 +3,13 @@ import tgpu, {
   type ExperimentalTgpuRoot,
   asUniform,
 } from 'typegpu/experimental';
+import * as d from 'typegpu/data';
 import { rand, DefaultGenerator } from '@typegpu/noise';
 import { estimateNormal, MarchResult, ShapeContext } from '@/lib-ray-marching';
-import * as d from 'typegpu/data';
+import { convertRgbToY } from '@/lib-color/ycbcr';
+import { march, MarchParams } from '@/lib-ray-marching';
+import { accessViewportSize } from '@/lib-common';
+
 import type { GBuffer } from '../../gBuffer';
 import {
   Camera,
@@ -15,10 +19,7 @@ import {
 } from '@/lib-camera';
 import { Material, skyColor, worldMat, worldSdf } from './worldSdf';
 import { ONES_3F } from '../wgslUtils/mathConstants';
-import { convertRgbToY } from '@/lib-color/ycbcr';
 import { store } from '@/store';
-import { march, MarchParams } from '@/lib-ray-marching';
-import { getViewportSize } from '../commonSlots';
 
 const BlockSize = 8;
 
@@ -326,7 +327,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
     .with(getRandomSeedPrimer, asUniform(randomSeedPrimerBuffer))
     .with(getAccumulatedLayers, asUniform(layersBuffer))
     .with(getCameraProps, asUniform(camera.cameraBuffer))
-    .with(getViewportSize, d.vec2f(mainPassSize[0], mainPassSize[1]))
+    .with(accessViewportSize, d.vec2f(mainPassSize[0], mainPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---
     .withCompute(mainComputeFn)
@@ -337,7 +338,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
     // filling slots
     .with(OutputFormat, 'rgba16float')
     .with(getCameraProps, asUniform(camera.cameraBuffer))
-    .with(getViewportSize, d.vec2f(auxPassSize[0], auxPassSize[1]))
+    .with(accessViewportSize, d.vec2f(auxPassSize[0], auxPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---
     .withCompute(auxComputeFn)

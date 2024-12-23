@@ -4,7 +4,7 @@ import tgpu, {
   type ExperimentalTgpuRoot,
 } from 'typegpu/experimental';
 import * as d from 'typegpu/data';
-import { getViewportSize } from '../commonSlots';
+import { accessViewportSize } from '@/lib-common';
 
 const getTexelSizeX = tgpu.accessor(d.vec2f);
 const getTexelSizeY = tgpu.accessor(d.vec2f);
@@ -28,7 +28,7 @@ const resampleCubic = tgpu
   .does(/* wgsl */ `(@location(0) uv: vec2f) -> @location(0) vec4f {
     let texel_size_x = getTexelSizeX;
     let texel_size_y = getTexelSizeY;
-    let viewport_size = getViewportSize;
+    let viewport_size = accessViewportSize;
     // calc filter texture coordinates where [0,1] is a single texel
     // (can be done in vertex program instead)
     let coord_hg = uv * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
@@ -55,7 +55,7 @@ const resampleCubic = tgpu
   .$uses({
     getTexelSizeX,
     getTexelSizeY,
-    getViewportSize,
+    accessViewportSize,
     hgLookup: externalLayout.bound.hgLookup,
     texture: externalLayout.bound.texture,
     wrappingSampler: externalLayout.bound.wrappingSampler,
@@ -173,7 +173,7 @@ export const ResampleStep = ({
     .does(() => viewportUniform.value.texelSizeY);
 
   const pipeline = root
-    .with(getViewportSize, myGetViewportSize)
+    .with(accessViewportSize, myGetViewportSize)
     .with(getTexelSizeX, myGetTexelSizeX)
     .with(getTexelSizeY, myGetTexelSizeY)
     .withVertex(fullScreenQuadVertexFn, {})

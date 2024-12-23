@@ -1,18 +1,8 @@
-import { getViewportSize } from '@/GameEngine/commonSlots';
 import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
+import { rgbToYcbcrMatrix, ycbcrToRgbMatrix } from '@/lib-color';
 
-const rgbToYcbcrMatrix = d.mat3x3f(
-  d.vec3f(0.299, 0.587, 0.114),
-  d.vec3f(-0.168736, -0.331264, 0.5),
-  d.vec3f(0.5, -0.418688, -0.081312),
-);
-
-const ycbcrToRgbMatrix = d.mat3x3f(
-  d.vec3f(1.0, 0, 1.402),
-  d.vec3f(1.0, -0.344136, -0.714136),
-  d.vec3f(1.0, 1.772, 0),
-);
+import { getViewportSize } from '@/GameEngine/commonSlots';
 
 export const combinationLayout = tgpu
   .bindGroupLayout({

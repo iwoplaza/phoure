@@ -4,7 +4,7 @@ import tgpu, {
   asUniform,
 } from 'typegpu/experimental';
 import { rand, DefaultGenerator } from '@typegpu/noise';
-import { MarchResult, ShapeContext } from '@/lib-ray-marching';
+import { estimateNormal, MarchResult, ShapeContext } from '@/lib-ray-marching';
 import * as d from 'typegpu/data';
 import type { GBuffer } from '../../gBuffer';
 import {
@@ -13,19 +13,12 @@ import {
   constructRayPos,
   getCameraProps,
 } from '@/lib-camera';
-import {
-  Material,
-  skyColor,
-  surfaceDist,
-  worldMat,
-  worldSdf,
-} from './worldSdf';
+import { Material, skyColor, worldMat, worldSdf } from './worldSdf';
 import { ONES_3F } from '../wgslUtils/mathConstants';
-import { convertRgbToY } from './colorUtils';
+import { convertRgbToY } from '@/lib-color/ycbcr';
 import { store } from '@/store';
 import { march, MarchParams } from '@/lib-ray-marching';
 import { getViewportSize } from '../commonSlots';
-import { normalize, mul } from 'typegpu/std';
 
 const BlockSize = 8;
 
@@ -71,31 +64,6 @@ const reflect = tgpu
   .$uses({ randOnHemisphere: rand.onHemisphere })
   .$name('reflect');
 
-const worldNormals = tgpu
-  .fn([d.vec3f, ShapeContext], d.vec3f)
-  .does((point, ctx) => {
-    const epsilon = surfaceDist(ctx) * 0.5; // arbitrary - should be smaller than any surface detail in your distance function, but not so small as to get lost in float precision
-    const offX = d.vec3f(point.x + epsilon, point.y, point.z);
-    const offY = d.vec3f(point.x, point.y + epsilon, point.z);
-    const offZ = d.vec3f(point.x, point.y, point.z + epsilon);
-
-    const centerDistance = MarchParams.sampleSdf.value(point);
-    const xDistance = MarchParams.sampleSdf.value(offX);
-    const yDistance = MarchParams.sampleSdf.value(offY);
-    const zDistance = MarchParams.sampleSdf.value(offZ);
-
-    return normalize(
-      mul(
-        1 / epsilon,
-        d.vec3f(
-          xDistance - centerDistance,
-          yDistance - centerDistance,
-          zDistance - centerDistance,
-        ),
-      ),
-    );
-  });
-
 const renderSubPixel = tgpu
   .fn([d.vec2f], d.vec3f)
   .does(/* wgsl */ `(coord: vec2f) -> vec3f {
@@ -113,7 +81,7 @@ const renderSubPixel = tgpu
       return min(skyColor(init_shape_ctx.rayDir), ONES_3F);
     }
 
-    let init_normal = worldNormals(init_march_result.position, init_shape_ctx);
+    let init_normal = estimateNormal(init_march_result.position, init_shape_ctx);
 
     var init_material: Material;
     worldMat(init_march_result.position, init_shape_ctx, &init_material);
@@ -158,7 +126,7 @@ const renderSubPixel = tgpu
           break;
         }
 
-        normal = worldNormals(shape_ctx.rayPos, shape_ctx);
+        normal = estimateNormal(shape_ctx.rayPos, shape_ctx);
 
         worldMat(shape_ctx.rayPos, shape_ctx, &material);
 
@@ -198,7 +166,7 @@ const renderSubPixel = tgpu
     ShapeContext,
     constructRayPos,
     constructRayDir,
-    worldNormals,
+    estimateNormal,
     march,
     skyColor,
     worldMat,
@@ -284,7 +252,7 @@ const auxComputeFn = tgpu
       world_normal = -shape_ctx.rayDir;
     }
     else {
-      world_normal = worldNormals(march_result.position, shape_ctx);
+      world_normal = estimateNormal(march_result.position, shape_ctx);
     }
   
     var material: Material;
@@ -321,7 +289,7 @@ const auxComputeFn = tgpu
     constructRayPos,
     constructRayDir,
     march,
-    worldNormals,
+    estimateNormal,
     worldMat,
     convertRgbToY,
     getCameraProps,

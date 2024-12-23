@@ -3,12 +3,12 @@ import tgpu, {
   asUniform,
   type ExperimentalTgpuRoot,
 } from 'typegpu/experimental';
+import { convertRgbToY } from '@/lib-color';
 
 import { Model7 } from '../model7';
 import type { GBuffer } from '../gBuffer';
 import { layerLayout, createNetworkLayer } from './networkLayer';
 import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';
-import { convertRgbToY } from '../GameEngine/sdfRenderer/colorUtils';
 import {
   convolveFn,
   inChannelsQuarter,

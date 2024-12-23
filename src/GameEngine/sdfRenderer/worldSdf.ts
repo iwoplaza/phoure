@@ -1,7 +1,7 @@
 import tgpu from 'typegpu/experimental';
 import * as d from 'typegpu/data';
 import { sphere } from '@/lib-sdf';
-import { ShapeContext } from '@/lib-ray-marching';
+import { ShapeContext, MarchParams } from '@/lib-ray-marching';
 
 export const Material = d.struct({
   albedo: d.vec3f,
@@ -9,17 +9,15 @@ export const Material = d.struct({
   emissive: d.bool,
 });
 
-// const getTime = wgsl.slot<TgpuFn<[], F32>>();
-
-export const surfaceDist = tgpu.fn([ShapeContext], d.f32).does((_ctx) => 0.001);
+// const getTime = tgpu.accessor(d.f32);
 
 const objSdfShell = tgpu.fn([d.vec3f], d.f32);
 
-const objLeftBlob = objSdfShell
-  .does(/* wgsl */ `(pos: vec3f) -> f32 {
-    return sphere(pos, vec3(-0.3, -0.2, 0.), 0.2);
-  }`)
-  .$uses({ sphere });
+const objLeftBlobPos = d.vec3f(-0.3, -0.2, 0);
+
+const objLeftBlob = tgpu.fn([d.vec3f], d.f32).does((pos) => {
+  return sphere(pos, objLeftBlobPos, 0.2);
+});
 
 // ANIMATED LIGHT
 // const objCenterBlob = wgsl.fn`(pos: vec3f) -> f32 {
@@ -123,7 +121,7 @@ export const worldMat = tgpu
   .$uses({
     ShapeContext,
     Material,
-    surfaceDist,
+    surfaceDist: MarchParams.getSurfaceThreshold,
     objLeftBlob,
     objCenterBlob,
     objRightBlob,

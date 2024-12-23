@@ -1,12 +1,15 @@
 import { f32, mat3x3f, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
+import { dot } from 'typegpu/std';
+
+const rgbToYFactor = tgpu.const(
+  vec3f,
+  vec3f(0.2538745098, 0.5061058824, 0.09829019608),
+);
 
 export const convertRgbToY = tgpu
   .fn([vec3f], f32)
-  .does(
-    (rgb) =>
-      16 / 255 + (64.738 * rgb.x + 129.057 * rgb.y + 25.064 * rgb.z) / 255,
-  )
+  .does((rgb) => 0.06274509804 + dot(rgb, rgbToYFactor.value))
   .$name('convert_rgb_to_y');
 
 export const rgbToYcbcrMatrix = tgpu.const(

@@ -1,9 +1,9 @@
-import * as d from 'typegpu/data';
 import tgpu, { type ExperimentalTgpuRoot } from 'typegpu/experimental';
+import { arrayOf, vec4f, f32 } from 'typegpu/data';
 
 export const layerLayout = tgpu.bindGroupLayout({
-  weights: { storage: (n) => d.arrayOf(d.vec4f, n) },
-  biases: { storage: (n) => d.arrayOf(d.f32, n) },
+  weights: { storage: (n) => arrayOf(vec4f, n) },
+  biases: { storage: (n) => arrayOf(f32, n) },
 });
 
 export function createNetworkLayer(

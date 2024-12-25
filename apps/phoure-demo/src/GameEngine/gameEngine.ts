@@ -1,6 +1,6 @@
 import tgpu from 'typegpu/experimental';
 import type { SetStateAction } from 'jotai';
-import { MenderStep } from '@/lib-phoure/menderStep';
+import { MenderStep } from '@/lib-phoure';
 import { BicubicFilter } from '@/lib-filter';
 
 import { store } from '../store';

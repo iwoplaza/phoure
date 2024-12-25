@@ -5,7 +5,7 @@ import tgpu, {
   type Uniform,
 } from 'typegpu/experimental';
 import * as d from 'typegpu/data';
-import { accessViewportSize } from '@/lib-common';
+import { accessViewportSize } from '@typegpu/common';
 
 import { store } from '@/store';
 import {

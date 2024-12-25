@@ -3,7 +3,8 @@ import tgpu, {
   asUniform,
   type ExperimentalTgpuRoot,
 } from 'typegpu/experimental';
-import { convertRgbToY } from '@/lib-color';
+import { convertRgbToY } from '@typegpu/color';
+import { accessViewportSize } from '@typegpu/common';
 
 import { Model7 } from './model7';
 import type { GBuffer } from '../gBuffer';
@@ -17,7 +18,6 @@ import {
   outChannelsSlot,
 } from '../GameEngine/convolve';
 import { combinationEntryFn, combinationLayout } from './combineShader';
-import { accessViewportSize } from '@/lib-common';
 
 const blockDim = 8;
 

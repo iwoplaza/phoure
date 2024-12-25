@@ -1,0 +1,31 @@
+{
+  "name": "@typegpu/common",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Common utilities for TypeGPU.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "module": "./dist/index.js",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["README.md", "package.json", "dist"],
+  "scripts": {
+    "build": "pkgroll",
+    "dev:build": "pkgroll"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "devDependencies": {
+    "pkgroll": "^2.6.0",
+    "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu"
+  },
+  "peerDependencies": {
+    "typegpu": "^0.3.0"
+  }
+}

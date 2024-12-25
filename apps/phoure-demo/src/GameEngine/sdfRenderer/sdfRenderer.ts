@@ -4,19 +4,24 @@ import tgpu, {
   asUniform,
 } from 'typegpu/experimental';
 import * as d from 'typegpu/data';
+import { convertRgbToY } from '@typegpu/color';
 import { rand, DefaultGenerator } from '@typegpu/noise';
-import { estimateNormal, MarchResult, ShapeContext } from '@/lib-ray-marching';
-import { convertRgbToY } from '@/lib-color/ycbcr';
-import { march, MarchParams } from '@/lib-ray-marching';
-import { accessViewportSize } from '@/lib-common';
-
-import type { GBuffer } from '../../gBuffer';
+import { accessViewportSize } from '@typegpu/common';
+import {
+  march,
+  MarchParams,
+  estimateNormal,
+  MarchResult,
+  ShapeContext,
+} from '@/lib-ray-marching';
 import {
   Camera,
   constructRayDir,
   constructRayPos,
   getCameraProps,
 } from '@/lib-camera';
+
+import type { GBuffer } from '../../gBuffer';
 import { Material, skyColor, worldMat, worldSdf } from './worldSdf';
 import { ONES_3F } from '../wgslUtils/mathConstants';
 import { store } from '@/store';

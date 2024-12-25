@@ -2,6 +2,7 @@
   "name": "@typegpu/common",
   "version": "0.0.0",
   "type": "module",
+  "sideEffects": false,
   "description": "Common utilities for TypeGPU.",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -16,13 +17,17 @@
   },
   "files": ["README.md", "package.json", "dist"],
   "scripts": {
-    "build": "pkgroll",
-    "dev:build": "pkgroll"
+    "build": "rollup -c",
+    "dev:build": "rollup -c",
+    "dev:watch": "rollup -c --watch"
   },
   "keywords": [],
   "license": "MIT",
   "devDependencies": {
-    "pkgroll": "^2.6.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "rollup": "^4.29.1",
+    "rollup-plugin-typegpu": "^0.0.0",
     "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu"
   },
   "peerDependencies": {

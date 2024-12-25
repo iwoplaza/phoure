@@ -1,16 +1,7 @@
-import { fullScreenQuadVertexFn } from '@/shaders/fullScreenQuad';
-import tgpu, {
-  asUniform,
-  type TgpuFn,
-  type ExperimentalTgpuRoot,
-} from 'typegpu/experimental';
-import * as d from 'typegpu/data';
-import { getViewportSizeSlot } from '../commonSlots';
+import tgpu, { type ExperimentalTgpuRoot } from 'typegpu/experimental';
+import { builtin, vec2f, vec4f } from 'typegpu/data';
 
-export const getTexelSizeXSlot = tgpu.slot<TgpuFn<[], d.Vec2f>>();
-export const getTexelSizeYSlot = tgpu.slot<TgpuFn<[], d.Vec2f>>();
-
-const externalLayout = tgpu
+const layout = tgpu
   .bindGroupLayout({
     wrappingSampler: { sampler: 'filtering' },
     clampingSampler: { sampler: 'filtering' },
@@ -20,27 +11,77 @@ const externalLayout = tgpu
   })
   .$name('Resample - external bind group layout');
 
+const fullScreenQuadVertexFn = tgpu
+  .vertexFn(
+    { idx: builtin.vertexIndex },
+    {
+      pos: builtin.position,
+      uv: vec2f,
+      texelSizeX: vec2f,
+      texelSizeY: vec2f,
+      coordHG: vec2f,
+    },
+  )
+  .does(/* wgsl */ `(@builtin(vertex_index) idx: u32) -> VertexOutput {
+    const SCREEN_RECT = array<vec2f, 6>(
+      vec2f(-1.0, -1.0),
+      vec2f(1.0, -1.0),
+      vec2f(-1.0, 1.0),
+
+      vec2f(1.0, -1.0),
+      vec2f(-1.0, 1.0),
+      vec2f(1.0, 1.0),
+    );
+
+    const UVS = array<vec2f, 6>(
+      vec2f(0.0, 1.0),
+      vec2f(1.0, 1.0),
+      vec2f(0.0, 0.0),
+
+      vec2f(1.0, 1.0),
+      vec2f(0.0, 0.0),
+      vec2f(1.0, 0.0),
+    );
+
+    let viewport_size = vec2f(textureDimensions(texture));
+
+    var output: VertexOutput;
+    output.pos = vec4f(SCREEN_RECT[idx], 0.0, 1.0);
+    output.uv = UVS[idx];
+    output.texelSizeX = vec2f(1. / f32(viewport_size.x), 0);
+    output.texelSizeY = vec2f(0, 1. / f32(viewport_size.y));
+
+    // calc filter texture coordinates where [0,1] is a single texel
+    output.coordHG = UVS[idx] * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
+
+    return output;
+  }`)
+  .$uses({ texture: layout.bound.texture });
+
 /**
  * Implementation based on:
  * https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-20-fast-third-order-texture-filtering
  */
 const resampleCubic = tgpu
-  .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
-  .does(/* wgsl */ `(@location(0) uv: vec2f) -> @location(0) vec4f {
-    let texel_size_x = getTexelSizeXSlot();
-    let texel_size_y = getTexelSizeYSlot();
-    let viewport_size = getViewportSizeSlot();
-    // calc filter texture coordinates where [0,1] is a single texel
-    // (can be done in vertex program instead)
-    let coord_hg = uv * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
+  .fragmentFn(
+    {
+      pos: builtin.position,
+      uv: vec2f,
+      texelSizeX: vec2f,
+      texelSizeY: vec2f,
+      coordHG: vec2f,
+    },
+    vec4f,
+  )
+  .does(/* wgsl */ `(@location(0) uv: vec2f, @location(1) texelSizeX: vec2f, @location(2) texelSizeY: vec2f, @location(3) coord_hg: vec2f) -> @location(0) vec4f {
     var hg_x = textureSample(hgLookup, wrappingSampler, coord_hg.x).xyz;
     var hg_y = textureSample(hgLookup, wrappingSampler, coord_hg.y).xyz;      // determine linear sampling coordinates
-    var coord_source10 = uv + hg_x.x * texel_size_x;
-    var coord_source00 = uv - hg_x.y * texel_size_x;
-    var coord_source11 = coord_source10 + hg_y.x * texel_size_y;
-    var coord_source01 = coord_source00 + hg_y.x * texel_size_y;
-    coord_source10 = coord_source10 - hg_y.y * texel_size_y;
-    coord_source00 = coord_source00 - hg_y.y * texel_size_y;      // fetch four linearly interpolated inputs
+    var coord_source10 = uv + hg_x.x * texelSizeX;
+    var coord_source00 = uv - hg_x.y * texelSizeX;
+    var coord_source11 = coord_source10 + hg_y.x * texelSizeY;
+    var coord_source01 = coord_source00 + hg_y.x * texelSizeY;
+    coord_source10 = coord_source10 - hg_y.y * texelSizeY;
+    coord_source00 = coord_source00 - hg_y.y * texelSizeY;      // fetch four linearly interpolated inputs
     var tex_source00 = textureSample(texture, clampingSampler, coord_source00);
     var tex_source10 = textureSample(texture, clampingSampler, coord_source10);
     var tex_source01 = textureSample(texture, clampingSampler, coord_source01);
@@ -50,17 +91,12 @@ const resampleCubic = tgpu
     tex_source00 = mix(tex_source00, tex_source10, hg_x.z);
     
     return tex_source00;
-    // Doing linear interpolation for now.
-    // return textureSample(texture, clampingSampler, uv);
   }`)
   .$uses({
-    getTexelSizeXSlot,
-    getTexelSizeYSlot,
-    getViewportSizeSlot,
-    hgLookup: externalLayout.bound.hgLookup,
-    texture: externalLayout.bound.texture,
-    wrappingSampler: externalLayout.bound.wrappingSampler,
-    clampingSampler: externalLayout.bound.clampingSampler,
+    hgLookup: layout.bound.hgLookup,
+    texture: layout.bound.texture,
+    wrappingSampler: layout.bound.wrappingSampler,
+    clampingSampler: layout.bound.clampingSampler,
   });
 
 /**
@@ -115,15 +151,13 @@ type Options = {
   targetFormat: GPUTextureFormat;
   sourceTexture: () => GPUTextureView;
   targetTexture: GPUTextureView;
-  sourceSize: [number, number];
 };
 
-export const ResampleStep = ({
+export const BicubicFilter = ({
   root,
   targetFormat,
   sourceTexture,
   targetTexture,
-  sourceSize,
 }: Options) => {
   const hgLookupTexture = HGLookupTexture(root);
 
@@ -145,47 +179,7 @@ export const ResampleStep = ({
     addressModeW: 'clamp-to-edge',
   });
 
-  const ViewportStruct = d.struct({
-    size: d.vec2f,
-    texelSizeX: d.vec2f,
-    texelSizeY: d.vec2f,
-  });
-
-  const viewportBuffer = root
-    .createBuffer(ViewportStruct, {
-      size: d.vec2f(sourceSize[0], sourceSize[1]),
-      texelSizeX: d.vec2f(1 / sourceSize[0], 0),
-      texelSizeY: d.vec2f(0, 1 / sourceSize[1]),
-    })
-    .$usage('uniform');
-
-  const viewportUniform = asUniform(viewportBuffer);
-
-  const myGetViewportSize = tgpu
-    .fn([], d.vec2f)
-    .does(`() -> vec2f {
-      return viewportUniform.size;
-    }`)
-    .$uses({ viewportUniform });
-
-  const myGetTexelSizeX = tgpu
-    .fn([], d.vec2f)
-    .does(`() -> vec2f {
-      return viewportUniform.texelSizeX;
-    }`)
-    .$uses({ viewportUniform });
-
-  const myGetTexelSizeY = tgpu
-    .fn([], d.vec2f)
-    .does(`() -> vec2f {
-      return viewportUniform.texelSizeY;
-    }`)
-    .$uses({ viewportUniform });
-
   const pipeline = root
-    .with(getViewportSizeSlot, myGetViewportSize)
-    .with(getTexelSizeXSlot, myGetTexelSizeX)
-    .with(getTexelSizeYSlot, myGetTexelSizeY)
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(resampleCubic, { format: targetFormat })
     .createPipeline()
@@ -203,21 +197,15 @@ export const ResampleStep = ({
 
   return {
     perform() {
-      const externalBindGroup = externalLayout.populate({
+      const externalBindGroup = layout.populate({
         wrappingSampler,
         clampingSampler,
         texture: sourceTexture(),
         hgLookup: hgLookupView,
       });
 
-      viewportBuffer.write({
-        size: d.vec2f(sourceSize[0], sourceSize[1]),
-        texelSizeX: d.vec2f(1 / sourceSize[0], 0),
-        texelSizeY: d.vec2f(0, 1 / sourceSize[1]),
-      });
-
       pipeline
-        .with(externalLayout, externalBindGroup)
+        .with(layout, externalBindGroup)
         .withColorAttachment(passColorAttachment)
         .draw(6);
     },

@@ -3,12 +3,12 @@ import tgpu, {
   asUniform,
   type ExperimentalTgpuRoot,
 } from 'typegpu/experimental';
+import { convertRgbToY } from '@/lib-color';
 
-import { Model7 } from '../model7';
+import { Model7 } from './model7';
 import type { GBuffer } from '../gBuffer';
 import { layerLayout, createNetworkLayer } from './networkLayer';
 import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';
-import { convertRgbToY } from '../GameEngine/sdfRenderer/colorUtils';
 import {
   convolveFn,
   inChannelsQuarter,
@@ -17,7 +17,7 @@ import {
   outChannelsSlot,
 } from '../GameEngine/convolve';
 import { combinationEntryFn, combinationLayout } from './combineShader';
-import { getViewportSizeSlot } from '@/GameEngine/commonSlots';
+import { accessViewportSize } from '@/lib-common';
 
 const blockDim = 8;
 
@@ -72,7 +72,7 @@ const sampleGlobal = tgpu.derived(() => {
       /* TODO: ptr */ d.arrayOf(d.vec4f, inChannelsQuarter.value),
     ])
     .does(`(x: i32, y: i32, result: ptr<function, array<vec4f, inChannelsQuarter>>) {
-      let canvasSize = getViewportSize();
+      let canvasSize = accessViewportSize;
       let coord = vec2u(
         u32(max(0, min(x, i32(canvasSize.x) - 1))),
         u32(max(0, min(y, i32(canvasSize.y) - 1))),
@@ -117,7 +117,7 @@ const sampleGlobal = tgpu.derived(() => {
     }`)
     .$uses({
       inChannelsQuarter,
-      getViewportSize: getViewportSizeSlot,
+      accessViewportSize,
       inputFromGBufferSlot,
       blurred_tex: ioLayout.bound.blurred_tex,
       aux_tex: ioLayout.bound.aux_tex,
@@ -165,7 +165,7 @@ const entryComputeFn = tgpu
       applyReLU(&result);
     }
 
-    let canvasSize = getViewportSizeSlot();
+    let canvasSize = accessViewportSize;
   
     let output_buffer_begin =
       (gid.y * u32(canvasSize.x) +
@@ -180,7 +180,7 @@ const entryComputeFn = tgpu
     reluSlot,
     applyReLU,
     biases,
-    getViewportSizeSlot,
+    accessViewportSize,
     output_buffer: ioLayout.bound.output_buffer,
     OUT_CHANNELS: outChannelsSlot,
   });
@@ -189,13 +189,6 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
   // Resource locators
 
   const viewportSizeBuffer = root.createBuffer(d.vec2f).$usage('uniform');
-
-  const myGetViewportSize = tgpu
-    .fn([], d.vec2f)
-    .does(`() -> vec2f {
-      return viewportSize;
-    }`)
-    .$uses({ viewportSize: asUniform(viewportSizeBuffer) });
 
   // Textures
 
@@ -244,7 +237,7 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
         .with(outChannelsSlot, options.outChannels)
         .with(reluSlot, options.relu)
         .with(inputFromGBufferSlot, options.inputFromGBuffer)
-        .with(getViewportSizeSlot, myGetViewportSize)
+        .with(accessViewportSize, asUniform(viewportSizeBuffer))
         // ---
         .withCompute(entryComputeFn)
         .createPipeline()
@@ -308,7 +301,7 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
   // ---
 
   const combinationPipeline = root
-    .with(getViewportSizeSlot, myGetViewportSize)
+    .with(accessViewportSize, asUniform(viewportSizeBuffer))
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(combinationEntryFn, { format: 'rgba8unorm' })
     .createPipeline();

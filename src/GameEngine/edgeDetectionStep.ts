@@ -2,12 +2,12 @@
 
 import { type Wgsl, wgsl, type TypeGpuRuntime } from 'typegpu';
 import { i32, struct } from 'typegpu/data';
+import { convertRgbToY } from '@/lib-color';
 
 import type { GBuffer } from '../gBuffer';
 import { SceneSchema } from '../schema/scene';
-import { NetworkLayer } from '../mending/networkLayer';
+import { NetworkLayer } from '../lib-phoure/networkLayer';
 import { convolveFn } from './convolve';
-import { convertRgbToY } from './sdfRenderer/colorUtils';
 
 const blockDim = 8;
 

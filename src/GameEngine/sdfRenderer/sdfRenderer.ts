@@ -1,32 +1,25 @@
 import { atom } from 'jotai';
 import tgpu, {
-  type TgpuFn,
   type ExperimentalTgpuRoot,
   asUniform,
 } from 'typegpu/experimental';
-import { rand, DefaultGenerator } from '@typegpu/noise';
 import * as d from 'typegpu/data';
+import { rand, DefaultGenerator } from '@typegpu/noise';
+import { estimateNormal, MarchResult, ShapeContext } from '@/lib-ray-marching';
+import { convertRgbToY } from '@/lib-color/ycbcr';
+import { march, MarchParams } from '@/lib-ray-marching';
+import { accessViewportSize } from '@/lib-common';
+
 import type { GBuffer } from '../../gBuffer';
 import {
   Camera,
-  CameraStruct,
   constructRayDir,
   constructRayPos,
   getCameraProps,
-} from './camera';
-import worldSdf, {
-  Material,
-  ShapeContext,
-  skyColor,
-  surfaceDist,
-  worldMat,
-} from './worldSdf';
+} from '@/lib-camera';
+import { Material, skyColor, worldMat, worldSdf } from './worldSdf';
 import { ONES_3F } from '../wgslUtils/mathConstants';
-import { MAX_STEPS, MarchResult, distThresholdFnSlot, march } from './marchSdf';
-import { convertRgbToY } from './colorUtils';
 import { store } from '@/store';
-import { getViewportSizeSlot } from '../commonSlots';
-import { normalize, mul } from 'typegpu/std';
 
 const BlockSize = 8;
 
@@ -38,8 +31,8 @@ const ONE_OVER_SUPER_SAMPLES = 1 / SUPER_SAMPLES;
 const SUB_SAMPLES = 16;
 const MAX_REFL = 3;
 
-const getRandomSeedPrimerSlot = tgpu.slot<TgpuFn<[], d.F32>>();
-const getAccumulatedLayersSlot = tgpu.slot<TgpuFn<[], d.F32>>();
+const getRandomSeedPrimer = tgpu.accessor(d.f32);
+const getAccumulatedLayers = tgpu.accessor(d.f32);
 
 const Reflection = d.struct({
   color: d.vec3f,
@@ -47,8 +40,6 @@ const Reflection = d.struct({
 });
 
 export const accumulatedLayersAtom = atom(0);
-
-const marchWithSurfaceDist = march.with(distThresholdFnSlot, surfaceDist);
 
 /**
  * Reflecting: 𝑟=𝑑−2(𝑑⋅𝑛)𝑛
@@ -74,49 +65,24 @@ const reflect = tgpu
   .$uses({ randOnHemisphere: rand.onHemisphere })
   .$name('reflect');
 
-const worldNormals = tgpu
-  .fn([d.vec3f, ShapeContext], d.vec3f)
-  .does((point, ctx) => {
-    const epsilon = surfaceDist(ctx) * 0.5; // arbitrary - should be smaller than any surface detail in your distance function, but not so small as to get lost in float precision
-    const offX = d.vec3f(point.x + epsilon, point.y, point.z);
-    const offY = d.vec3f(point.x, point.y + epsilon, point.z);
-    const offZ = d.vec3f(point.x, point.y, point.z + epsilon);
-
-    const centerDistance = worldSdf(point);
-    const xDistance = worldSdf(offX);
-    const yDistance = worldSdf(offY);
-    const zDistance = worldSdf(offZ);
-
-    return normalize(
-      mul(
-        1 / epsilon,
-        d.vec3f(
-          xDistance - centerDistance,
-          yDistance - centerDistance,
-          zDistance - centerDistance,
-        ),
-      ),
-    );
-  });
-
 const renderSubPixel = tgpu
   .fn([d.vec2f], d.vec3f)
   .does(/* wgsl */ `(coord: vec2f) -> vec3f {
     // doing the first march before each sub-sample, since the first march result is the same for all of them
 
     var init_shape_ctx: ShapeContext;
-    init_shape_ctx.ray_pos = constructRayPos();
-    init_shape_ctx.ray_dir = constructRayDir(coord);
-    init_shape_ctx.ray_distance = 0.;
+    init_shape_ctx.rayPos = constructRayPos();
+    init_shape_ctx.rayDir = constructRayDir(coord);
+    init_shape_ctx.rayDistance = 0.;
     var init_march_result: MarchResult;
 
-    marchWithSurfaceDist(&init_shape_ctx, MAX_STEPS, &init_march_result);
+    march(&init_shape_ctx, MAX_STEPS, &init_march_result);
 
     if (init_march_result.steps >= MAX_STEPS) {
-      return min(skyColor(init_shape_ctx.ray_dir), ONES_3F);
+      return min(skyColor(init_shape_ctx.rayDir), ONES_3F);
     }
 
-    let init_normal = worldNormals(init_march_result.position, init_shape_ctx);
+    let init_normal = estimateNormal(init_march_result.position, init_shape_ctx);
 
     var init_material: Material;
     worldMat(init_march_result.position, init_shape_ctx, &init_material);
@@ -136,14 +102,14 @@ const renderSubPixel = tgpu
       var refl_count = 0u;
 
       var shape_ctx: ShapeContext;
-      shape_ctx.ray_pos = init_march_result.position;
-      shape_ctx.ray_dir = init_shape_ctx.ray_dir;
-      shape_ctx.ray_distance = init_shape_ctx.ray_distance;
+      shape_ctx.rayPos = init_march_result.position;
+      shape_ctx.rayDir = init_shape_ctx.rayDir;
+      shape_ctx.rayDistance = init_shape_ctx.rayDistance;
 
       for (var refl = 0u; refl < MAX_REFL; refl++) {
         var roughness: f32 = 0.;
-        shape_ctx.ray_dir = reflect(
-          shape_ctx.ray_dir,
+        shape_ctx.rayDir = reflect(
+          shape_ctx.rayDir,
           normal,
           material.roughness,
           &roughness,
@@ -153,17 +119,17 @@ const renderSubPixel = tgpu
         refl_count++;
 
         var march_result: MarchResult;
-        marchWithSurfaceDist(&shape_ctx, MAX_STEPS, &march_result);
-        shape_ctx.ray_pos = march_result.position;
+        march(&shape_ctx, MAX_STEPS, &march_result);
+        shape_ctx.rayPos = march_result.position;
 
         if (march_result.steps >= MAX_STEPS) {
-          emissive_color = skyColor(shape_ctx.ray_dir);
+          emissive_color = skyColor(shape_ctx.rayDir);
           break;
         }
 
-        normal = worldNormals(shape_ctx.ray_pos, shape_ctx);
+        normal = estimateNormal(shape_ctx.rayPos, shape_ctx);
 
-        worldMat(shape_ctx.ray_pos, shape_ctx, &material);
+        worldMat(shape_ctx.rayPos, shape_ctx, &material);
 
         if (material.emissive) {
           emissive_color = material.albedo;
@@ -192,7 +158,7 @@ const renderSubPixel = tgpu
   }`)
   .$uses({
     SUB_SAMPLES,
-    MAX_STEPS,
+    MAX_STEPS: MarchParams.maxSteps,
     MAX_REFL,
     ONES_3F,
     MarchResult,
@@ -201,8 +167,8 @@ const renderSubPixel = tgpu
     ShapeContext,
     constructRayPos,
     constructRayDir,
-    worldNormals,
-    marchWithSurfaceDist,
+    estimateNormal,
+    march,
     skyColor,
     worldMat,
     reflect,
@@ -216,9 +182,9 @@ const mainLayout = tgpu.bindGroupLayout({
 const mainComputeFn = tgpu
   .computeFn([], { workgroupSize: [BlockSize, BlockSize] })
   .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    setupRandomSeed(vec2f(gid.xy) * ${Math.random()} + getRandomSeedPrimerSlot() * ${Math.random()});
+    setupRandomSeed(vec2f(gid.xy) * ${Math.random()} + getRandomSeedPrimer * ${Math.random()});
 
-    let prev_layers = getAccumulatedLayersSlot();
+    let prev_layers = getAccumulatedLayers;
     let prev_render = textureLoad(previousRender, gid.xy, 0);
   
     var acc = vec3f(0., 0., 0.);
@@ -253,8 +219,8 @@ const mainComputeFn = tgpu
     mainOutput: mainLayout.bound.mainOutput,
     setupRandomSeed: DefaultGenerator.seed,
     renderSubPixel,
-    getRandomSeedPrimerSlot,
-    getAccumulatedLayersSlot,
+    getRandomSeedPrimer,
+    getAccumulatedLayers,
   });
 
 const auxLayout = tgpu
@@ -273,21 +239,21 @@ const auxComputeFn = tgpu
     
     var march_result: MarchResult;
     var shape_ctx: ShapeContext;
-    shape_ctx.ray_pos = constructRayPos();
-    shape_ctx.ray_dir = constructRayDir(
+    shape_ctx.rayPos = constructRayPos();
+    shape_ctx.rayDir = constructRayDir(
       vec2f(GlobalInvocationID.xy) + offset
     );
-    shape_ctx.ray_distance = 0.;
+    shape_ctx.rayDistance = 0.;
   
-    marchWithSurfaceDist(&shape_ctx, MAX_STEPS, &march_result);
+    march(&shape_ctx, MAX_STEPS, &march_result);
   
     var world_normal: vec3f;
   
     if (march_result.steps >= MAX_STEPS) {
-      world_normal = -shape_ctx.ray_dir;
+      world_normal = -shape_ctx.rayDir;
     }
     else {
-      world_normal = worldNormals(march_result.position, shape_ctx);
+      world_normal = estimateNormal(march_result.position, shape_ctx);
     }
   
     var material: Material;
@@ -303,7 +269,7 @@ const auxComputeFn = tgpu
       // emission_luminance = albedo_luminance;
     }
   
-    let camera = getCameraProps();
+    let camera = getCameraProps;
     let view_normal = camera.view_matrix * vec4f(world_normal, 0);
   
     let aux = vec4(
@@ -317,14 +283,14 @@ const auxComputeFn = tgpu
     textureStore(auxOutput, GlobalInvocationID.xy, aux);
   }`)
   .$uses({
-    MAX_STEPS,
+    MAX_STEPS: MarchParams.maxSteps,
     MarchResult,
     ShapeContext,
     Material,
     constructRayPos,
     constructRayDir,
-    marchWithSurfaceDist,
-    worldNormals,
+    march,
+    estimateNormal,
     worldMat,
     convertRgbToY,
     getCameraProps,
@@ -349,43 +315,6 @@ export function createSDFRenderer(options: SDFRendererOptions) {
   // How many layers (previous renders) are stacked on top of each other to reduce noise.
   const layersBuffer = root.createBuffer(d.f32).$usage('uniform');
 
-  // Resource locators
-
-  const myGetRandomSeedPrimer = tgpu
-    .fn([], d.f32)
-    .does(/* wgsl */ `() -> f32 {
-      return randomSeedPrimer;
-    }`)
-    .$uses({ randomSeedPrimer: asUniform(randomSeedPrimerBuffer) });
-
-  const myGetAccumulatedLayers = tgpu
-    .fn([], d.f32)
-    .does(/* wgsl */ `() -> f32 {
-      return layers;
-    }`)
-    .$uses({ layers: asUniform(layersBuffer) });
-
-  const getMainViewportSize = tgpu
-    .fn([], d.vec2f)
-    .does(/* wgsl */ `() -> vec2f {
-      return vec2f(width, height);
-    }`)
-    .$uses({ width: mainPassSize[0], height: mainPassSize[1] });
-
-  const getAuxViewportSize = tgpu
-    .fn([], d.vec2f)
-    .does(/* wgsl */ `() -> vec2f {
-      return vec2f(width, height);
-    }`)
-    .$uses({ width: auxPassSize[0], height: auxPassSize[1] });
-
-  const myGetCameraProps = tgpu
-    .fn([], CameraStruct)
-    .does(/* wgsl */ `() -> CameraStruct {
-      return camera;
-    }`)
-    .$uses({ CameraStruct, camera: asUniform(camera.cameraBuffer) });
-
   // ---
 
   const auxBindGroup = auxLayout.populate({
@@ -395,10 +324,11 @@ export function createSDFRenderer(options: SDFRendererOptions) {
   const mainPipeline = root
     // filling slots
     .with(OutputFormat, 'rgba8unorm')
-    .with(getRandomSeedPrimerSlot, myGetRandomSeedPrimer)
-    .with(getAccumulatedLayersSlot, myGetAccumulatedLayers)
-    .with(getCameraProps, myGetCameraProps)
-    .with(getViewportSizeSlot, getMainViewportSize)
+    .with(getRandomSeedPrimer, asUniform(randomSeedPrimerBuffer))
+    .with(getAccumulatedLayers, asUniform(layersBuffer))
+    .with(getCameraProps, asUniform(camera.cameraBuffer))
+    .with(accessViewportSize, d.vec2f(mainPassSize[0], mainPassSize[1]))
+    .with(MarchParams.sampleSdf, worldSdf)
     // ---
     .withCompute(mainComputeFn)
     .createPipeline()
@@ -407,8 +337,9 @@ export function createSDFRenderer(options: SDFRendererOptions) {
   const auxPipeline = root
     // filling slots
     .with(OutputFormat, 'rgba16float')
-    .with(getCameraProps, myGetCameraProps)
-    .with(getViewportSizeSlot, getAuxViewportSize)
+    .with(getCameraProps, asUniform(camera.cameraBuffer))
+    .with(accessViewportSize, d.vec2f(auxPassSize[0], auxPassSize[1]))
+    .with(MarchParams.sampleSdf, worldSdf)
     // ---
     .withCompute(auxComputeFn)
     .createPipeline()

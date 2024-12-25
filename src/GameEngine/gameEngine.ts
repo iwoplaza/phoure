@@ -1,8 +1,10 @@
 import tgpu from 'typegpu/experimental';
 import type { SetStateAction } from 'jotai';
+import { MenderStep } from '@/lib-phoure/menderStep';
+import { BicubicFilter } from '@/lib-filter';
+
 import { store } from '../store';
 import { GBuffer } from '../gBuffer';
-import { MenderStep } from '../mending/menderStep';
 import {
   autoRotateControlAtom,
   displayModeAtom,
@@ -11,7 +13,6 @@ import {
 } from '../controlAtoms';
 import { makeGBufferDebugger } from './gBufferDebugger';
 import { PostProcessingStep } from './postProcessingStep';
-import { ResampleStep } from './resampleStep/resampleCubicStep';
 import {
   accumulatedLayersAtom,
   createSDFRenderer,
@@ -97,12 +98,11 @@ export const GameEngine = (
       throw err;
     }
 
-    const upscaleStep = ResampleStep({
+    const upscaleStep = BicubicFilter({
       root,
-      targetFormat: 'rgba8unorm',
       sourceTexture: () => gBuffer.outQuarterView,
       targetTexture: gBuffer.upscaledView,
-      sourceSize: gBuffer.quarterSize,
+      targetFormat: 'rgba8unorm',
     });
 
     const menderStep = MenderStep({

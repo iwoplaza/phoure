@@ -2,10 +2,10 @@ import { f32, vec2f, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 import { abs, sub, length, max, min } from 'typegpu/std';
 
-export const box2 = tgpu.fn([vec2f, vec2f], f32).does(`(p: vec2f, b: vec2f) -> f32 {
-  let d = abs(p) - b;
+export const box2 = tgpu.fn([vec2f, vec2f], f32).does((p, b) => {
+  const d = sub(abs(p), b);
   return length(max(d, vec2f(0.0))) + min(max(d.x, d.y), 0.0);
-}`);
+});
 
 export const box3 = tgpu.fn([vec3f, vec3f], f32).does((p, b) => {
   const q = sub(abs(p), b);

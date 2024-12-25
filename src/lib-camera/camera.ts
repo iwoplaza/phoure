@@ -1,11 +1,12 @@
 import { mat4, vec3 } from 'wgpu-matrix';
 import tgpu, {
-  type TgpuFn,
   type ExperimentalTgpuRoot,
   type TgpuBuffer,
   type Uniform,
 } from 'typegpu/experimental';
 import * as d from 'typegpu/data';
+import { accessViewportSize } from '@/lib-common';
+
 import { store } from '@/store';
 import {
   autoRotateControlAtom,
@@ -14,7 +15,6 @@ import {
   cameraYControlAtom,
   cameraZoomControlAtom,
 } from '@/controlAtoms';
-import { getViewportSizeSlot } from '../commonSlots';
 
 export const CameraStruct = d.struct({
   view_matrix: d.mat4x4f,
@@ -23,13 +23,13 @@ export const CameraStruct = d.struct({
 });
 
 export const getCameraProps = tgpu
-  .slot<TgpuFn<[], typeof CameraStruct>>()
+  .accessor(CameraStruct)
   .$name('getCameraProps');
 
 export const constructRayPos = tgpu
   .fn([], d.vec3f)
   .does(/* wgsl */ `() -> vec3f {
-    let camera = getCameraProps();
+    let camera = getCameraProps;
     return (camera.inv_view_matrix * vec4(0., 0., 0., 1.)).xyz;
   }`)
   .$uses({ getCameraProps });
@@ -37,8 +37,8 @@ export const constructRayPos = tgpu
 export const constructRayDir = tgpu
   .fn([d.vec2f], d.vec3f)
   .does(/* wgsl */ `(coord: vec2f) -> vec3f {
-    let camera = getCameraProps();
-    let viewport_size = getViewportSize();
+    let camera = getCameraProps;
+    let viewport_size = accessViewportSize;
     var view_coords = (coord - viewport_size / 2.) / viewport_size.y; // y in [-0.5, 0.5]
     view_coords = view_coords * camera.field_of_view;
 
@@ -51,7 +51,7 @@ export const constructRayDir = tgpu
 
     return (camera.inv_view_matrix * vec4(view_ray_dir, 0.)).xyz;
   }`)
-  .$uses({ getCameraProps, getViewportSize: getViewportSizeSlot })
+  .$uses({ getCameraProps, accessViewportSize })
   .$name('construct_ray_dir');
 
 export class Camera {

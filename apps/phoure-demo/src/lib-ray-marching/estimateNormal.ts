@@ -1,9 +1,9 @@
-import tgpu from 'typegpu/experimental';
 import { vec3f } from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 import { mul, normalize } from 'typegpu/std';
 
-import { ShapeContext } from './types';
 import { MarchParams } from './marchSdf';
+import { ShapeContext } from './types';
 
 /**
  * Estimates the normal vector at a point in space, based on the SDF given by `MarchParams.sampleSdf`.

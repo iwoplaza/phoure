@@ -1,5 +1,5 @@
-import tgpu from 'typegpu/experimental';
 import { builtin, vec2f } from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 
 export const fullScreenQuadVertexFn = tgpu
   .vertexFn({ idx: builtin.vertexIndex }, { pos: builtin.position, uv: vec2f })

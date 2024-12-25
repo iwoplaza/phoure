@@ -1,5 +1,5 @@
-import tgpu from 'typegpu/experimental';
 import { vec3f } from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 import { dot } from 'typegpu/std';
 
 export const dd = tgpu.fn([vec3f]).does((value) => {

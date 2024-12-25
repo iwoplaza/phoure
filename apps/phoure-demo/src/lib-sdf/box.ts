@@ -1,6 +1,6 @@
 import { f32, vec2f, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
-import { abs, sub, length, max, min } from 'typegpu/std';
+import { abs, length, max, min, sub } from 'typegpu/std';
 
 export const box2 = tgpu.fn([vec2f, vec2f], f32).does((p, b) => {
   const d = sub(abs(p), b);

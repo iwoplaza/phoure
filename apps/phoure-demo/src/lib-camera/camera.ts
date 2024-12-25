@@ -1,13 +1,12 @@
-import { mat4, vec3 } from 'wgpu-matrix';
+import { accessViewportSize } from '@typegpu/common';
+import * as d from 'typegpu/data';
 import tgpu, {
   type ExperimentalTgpuRoot,
   type TgpuBuffer,
   type Uniform,
 } from 'typegpu/experimental';
-import * as d from 'typegpu/data';
-import { accessViewportSize } from '@typegpu/common';
+import { mat4, vec3 } from 'wgpu-matrix';
 
-import { store } from '@/store';
 import {
   autoRotateControlAtom,
   cameraFovControlAtom,
@@ -15,6 +14,7 @@ import {
   cameraYControlAtom,
   cameraZoomControlAtom,
 } from '@/controlAtoms';
+import { store } from '@/store';
 
 export const CameraStruct = d.struct({
   view_matrix: d.mat4x4f,

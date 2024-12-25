@@ -1,30 +1,30 @@
-import { atom } from 'jotai';
-import tgpu, {
-  type ExperimentalTgpuRoot,
-  asUniform,
-} from 'typegpu/experimental';
-import * as d from 'typegpu/data';
-import { convertRgbToY } from '@typegpu/color';
-import { rand, DefaultGenerator } from '@typegpu/noise';
-import { accessViewportSize } from '@typegpu/common';
-import {
-  march,
-  MarchParams,
-  estimateNormal,
-  MarchResult,
-  ShapeContext,
-} from '@/lib-ray-marching';
 import {
   Camera,
   constructRayDir,
   constructRayPos,
   getCameraProps,
 } from '@/lib-camera';
+import {
+  MarchParams,
+  MarchResult,
+  ShapeContext,
+  estimateNormal,
+  march,
+} from '@/lib-ray-marching';
+import { convertRgbToY } from '@typegpu/color';
+import { accessViewportSize } from '@typegpu/common';
+import { DefaultGenerator, rand } from '@typegpu/noise';
+import { atom } from 'jotai';
+import * as d from 'typegpu/data';
+import tgpu, {
+  type ExperimentalTgpuRoot,
+  asUniform,
+} from 'typegpu/experimental';
 
-import type { GBuffer } from '../../gBuffer';
-import { Material, skyColor, worldMat, worldSdf } from './worldSdf';
-import { ONES_3F } from '../wgslUtils/mathConstants';
 import { store } from '@/store';
+import type { GBuffer } from '../../gBuffer';
+import { ONES_3F } from '../wgslUtils/mathConstants';
+import { Material, skyColor, worldMat, worldSdf } from './worldSdf';
 
 const BlockSize = 8;
 

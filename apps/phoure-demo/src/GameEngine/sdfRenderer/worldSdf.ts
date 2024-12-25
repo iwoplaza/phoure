@@ -1,7 +1,7 @@
-import tgpu from 'typegpu/experimental';
-import * as d from 'typegpu/data';
+import { MarchParams, ShapeContext } from '@/lib-ray-marching';
 import { sphere } from '@/lib-sdf';
-import { ShapeContext, MarchParams } from '@/lib-ray-marching';
+import * as d from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 
 export const Material = d.struct({
   albedo: d.vec3f,
@@ -70,7 +70,9 @@ export const worldSdf = tgpu
 
 // MATERIALS
 
-export const skyColor = tgpu.fn([d.vec3f], d.vec3f).does(/* wgsl */ `(dir: vec3f) -> vec3f {
+export const skyColor = tgpu
+  .fn([d.vec3f], d.vec3f)
+  .does(/* wgsl */ `(dir: vec3f) -> vec3f {
   let t = pow(min(abs(dir.y) * 4, 1.), 0.4);
   
   let uv = floor(30.0 * dir.xy);

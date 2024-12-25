@@ -1,9 +1,9 @@
 import {
-  vec2u,
   type I32,
   type U32,
   type Vec4f,
   type WgslArray,
+  vec2u,
 } from 'typegpu/data';
 import tgpu, { type Eventual, type TgpuFn } from 'typegpu/experimental';
 

@@ -1,6 +1,6 @@
 import { f32 } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
-import { max, abs, min } from 'typegpu/std';
+import { abs, max, min } from 'typegpu/std';
 
 /**
  * polynomial smooth min 2

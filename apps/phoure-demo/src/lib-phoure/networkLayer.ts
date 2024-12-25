@@ -1,5 +1,5 @@
+import { arrayOf, f32, vec4f } from 'typegpu/data';
 import tgpu, { type ExperimentalTgpuRoot } from 'typegpu/experimental';
-import { arrayOf, vec4f, f32 } from 'typegpu/data';
 
 export const layerLayout = tgpu.bindGroupLayout({
   weights: { storage: (n) => arrayOf(vec4f, n) },

@@ -1,6 +1,6 @@
-import tgpu, { type ExperimentalTgpuRoot } from 'typegpu/experimental';
-import * as d from 'typegpu/data';
 import { fullScreenQuadVertexFn } from '@/shaders/fullScreenQuad';
+import * as d from 'typegpu/data';
+import tgpu, { type ExperimentalTgpuRoot } from 'typegpu/experimental';
 
 type Options = {
   root: ExperimentalTgpuRoot;

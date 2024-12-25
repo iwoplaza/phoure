@@ -1,12 +1,12 @@
 // @ts-nocheck
 
-import { type Wgsl, wgsl, type TypeGpuRuntime } from 'typegpu';
-import { i32, struct } from 'typegpu/data';
 import { convertRgbToY } from '@/lib-color';
+import { type TypeGpuRuntime, type Wgsl, wgsl } from 'typegpu';
+import { i32, struct } from 'typegpu/data';
 
 import type { GBuffer } from '../gBuffer';
-import { SceneSchema } from '../schema/scene';
 import { NetworkLayer } from '../lib-phoure/networkLayer';
+import { SceneSchema } from '../schema/scene';
 import { convolveFn } from './convolve';
 
 const blockDim = 8;

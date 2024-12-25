@@ -1,19 +1,19 @@
-// @ts-nocheck
+// @ts-nocheck: Not finished yet
 
 import {
-  builtin,
   type TypeGpuRuntime,
-  wgsl,
   type WgslBuffer,
   type WgslPlum,
+  builtin,
+  wgsl,
 } from 'typegpu';
 import {
-  arrayOf,
   type F32,
+  type WgslArray,
+  arrayOf,
   f32,
   vec2f,
   vec2u,
-  type WgslArray,
 } from 'typegpu/data';
 
 import { roundUp } from '../mathUtils';

@@ -1,4 +1,4 @@
-import { struct, vec3f, f32 } from 'typegpu/data';
+import { f32, struct, vec3f } from 'typegpu/data';
 
 export const ShapeContext = struct({
   rayPos: vec3f,

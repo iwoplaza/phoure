@@ -5,10 +5,10 @@ import tgpu, {
   type TgpuFn,
 } from 'typegpu/experimental';
 
-import type { GBuffer } from '../gBuffer';
-import { store } from '@/store';
 import { displayModeAtom } from '@/controlAtoms';
 import { fullScreenQuadVertexFn } from '@/shaders/fullScreenQuad';
+import { store } from '@/store';
+import type { GBuffer } from '../gBuffer';
 
 const CHANNEL_SPLIT = 0;
 const CHANNEL_COLOR = 1;

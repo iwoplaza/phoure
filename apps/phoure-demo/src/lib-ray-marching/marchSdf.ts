@@ -1,5 +1,5 @@
-import tgpu from 'typegpu/experimental';
 import { f32, struct, u32, vec3f } from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 import { ShapeContext } from './types';
 
 const sampleSdfShell = tgpu.fn([vec3f], f32);

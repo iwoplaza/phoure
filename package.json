@@ -9,6 +9,7 @@
     "test": "vitest"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "typescript": "^5.0.2",
     "vitest": "^1.3.1"
   }

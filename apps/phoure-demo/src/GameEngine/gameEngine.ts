@@ -1,23 +1,23 @@
-import tgpu from 'typegpu/experimental';
-import type { SetStateAction } from 'jotai';
-import { MenderStep } from '@/lib-phoure';
 import { BicubicFilter } from '@/lib-filter';
+import { MenderStep } from '@/lib-phoure';
+import type { SetStateAction } from 'jotai';
+import tgpu from 'typegpu/experimental';
 
-import { store } from '../store';
-import { GBuffer } from '../gBuffer';
+import { PerformanceManager } from '@/PerformanceManager';
 import {
   autoRotateControlAtom,
   displayModeAtom,
   measurePerformanceAtom,
   targetResolutionAtom,
 } from '../controlAtoms';
+import { GBuffer } from '../gBuffer';
+import { store } from '../store';
 import { makeGBufferDebugger } from './gBufferDebugger';
 import { PostProcessingStep } from './postProcessingStep';
 import {
   accumulatedLayersAtom,
   createSDFRenderer,
 } from './sdfRenderer/sdfRenderer';
-import { PerformanceManager } from '@/PerformanceManager';
 
 class AlreadyDestroyedError extends Error {
   constructor() {

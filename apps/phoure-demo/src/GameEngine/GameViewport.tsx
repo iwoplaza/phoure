@@ -1,7 +1,7 @@
+import { targetResolutionAtom } from '@/controlAtoms';
+import { useAtomValue } from 'jotai';
 import { useEffect, useRef } from 'react';
 import { GameEngine } from './gameEngine';
-import { useAtomValue } from 'jotai';
-import { targetResolutionAtom } from '@/controlAtoms';
 
 function GameViewport() {
   const canvasRef = useRef<HTMLCanvasElement>(null);

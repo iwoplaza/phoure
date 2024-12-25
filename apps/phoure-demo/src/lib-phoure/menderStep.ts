@@ -1,15 +1,11 @@
+import { convertRgbToY } from '@typegpu/color';
+import { accessViewportSize } from '@typegpu/common';
 import * as d from 'typegpu/data';
 import tgpu, {
   asUniform,
   type ExperimentalTgpuRoot,
 } from 'typegpu/experimental';
-import { convertRgbToY } from '@typegpu/color';
-import { accessViewportSize } from '@typegpu/common';
 
-import { Model7 } from './model7';
-import type { GBuffer } from '../gBuffer';
-import { layerLayout, createNetworkLayer } from './networkLayer';
-import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';
 import {
   convolveFn,
   inChannelsQuarter,
@@ -17,7 +13,11 @@ import {
   kernelRadiusSlot,
   outChannelsSlot,
 } from '../GameEngine/convolve';
+import type { GBuffer } from '../gBuffer';
+import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';
 import { combinationEntryFn, combinationLayout } from './combineShader';
+import { Model7 } from './model7';
+import { createNetworkLayer, layerLayout } from './networkLayer';
 
 const blockDim = 8;
 

@@ -1,7 +1,7 @@
 // @ts-check
-import typegpu from 'rollup-plugin-typegpu';
-import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
+import typescript from '@rollup/plugin-typescript';
+import typegpu from 'rollup-plugin-typegpu';
 
 /**
  * @type {import('rollup').RollupOptions}

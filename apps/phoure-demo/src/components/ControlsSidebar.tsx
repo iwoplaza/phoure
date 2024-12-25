@@ -1,13 +1,25 @@
-import { useCallback, useId } from 'react';
+import { accumulatedLayersAtom } from '@/GameEngine/sdfRenderer/sdfRenderer';
+import {
+  type DisplayMode,
+  DisplayModes,
+  autoRotateControlAtom,
+  cameraFovControlAtom,
+  cameraOrientationControlAtom,
+  cameraYControlAtom,
+  cameraZoomControlAtom,
+  displayModeAtom,
+  targetResolutionAtom,
+} from '@/controlAtoms';
+import type { CheckedState } from '@radix-ui/react-checkbox';
+import type { SliderProps } from '@radix-ui/react-slider';
 import {
   type SetStateAction,
+  type WritableAtom,
   useAtom,
   useSetAtom,
-  type WritableAtom,
 } from 'jotai';
 import type { RESET } from 'jotai/utils';
-import type { SliderProps } from '@radix-ui/react-slider';
-import type { CheckedState } from '@radix-ui/react-checkbox';
+import { useCallback, useId } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
@@ -19,18 +31,6 @@ import {
   SelectValue,
 } from './ui/select';
 import { Slider } from './ui/slider';
-import {
-  type DisplayMode,
-  DisplayModes,
-  displayModeAtom,
-  autoRotateControlAtom,
-  cameraOrientationControlAtom,
-  targetResolutionAtom,
-  cameraYControlAtom,
-  cameraZoomControlAtom,
-  cameraFovControlAtom,
-} from '@/controlAtoms';
-import { accumulatedLayersAtom } from '@/GameEngine/sdfRenderer/sdfRenderer';
 
 function ControlLabel(props: { htmlFor: string; children: string }) {
   return (

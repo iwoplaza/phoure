@@ -10,7 +10,7 @@ Ethical AI upscaling for games. _(formerly "mender")_
 <div align="center">
 <div style="max-width: 640px">
 
-![hello](/public/phoure-app.png)
+![hello](/apps/phoure-demo/public/phoure-app.png)
 
 </div>
 </div>

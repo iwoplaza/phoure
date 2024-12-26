@@ -1,7 +1,7 @@
 <div align="center">
 
-![phoure (light mode)](/public/phoure-logo-light.svg#gh-light-mode-only)
-![phoure (dark mode)](/public/phoure-logo-dark.svg#gh-dark-mode-only)
+![phoure (light mode)](/apps/phoure-demo/public/phoure-logo-light.svg#gh-light-mode-only)
+![phoure (dark mode)](/apps/phoure-demo/public/phoure-logo-dark.svg#gh-dark-mode-only)
 
 Ethical AI upscaling for games. _(formerly "mender")_
 

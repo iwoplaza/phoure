@@ -1,0 +1,36 @@
+{
+  "name": "@typegpu/sdf",
+  "version": "0.0.0",
+  "type": "module",
+  "sideEffects": false,
+  "description": "Signed Distance Field (SDF) library for TypeGPU",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "module": "./dist/index.js",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["README.md", "package.json", "dist"],
+  "scripts": {
+    "build": "rollup -c",
+    "dev:build": "rollup -c",
+    "dev:watch": "rollup -c --watch"
+  },
+  "keywords": ["typegpu", "sdf", "signed distance field", "gpu", "webgpu"],
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "rollup": "^4.29.1",
+    "rollup-plugin-typegpu": "^0.0.0",
+    "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu"
+  },
+  "peerDependencies": {
+    "typegpu": "^0.3.0"
+  }
+}

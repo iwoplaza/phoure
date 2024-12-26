@@ -44,6 +44,9 @@ importers:
       '@typegpu/noise':
         specifier: ^0.0.1
         version: 0.0.1(typegpu@0.2.0)
+      '@typegpu/sdf':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-sdf
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.0
@@ -162,6 +165,24 @@ importers:
         version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu'
 
   packages/typegpu-common:
+    devDependencies:
+      '@rollup/plugin-terser':
+        specifier: ^0.4.4
+        version: 0.4.4(rollup@4.29.1)
+      '@rollup/plugin-typescript':
+        specifier: ^12.1.2
+        version: 12.1.2(rollup@4.29.1)(typescript@5.5.4)
+      rollup:
+        specifier: ^4.29.1
+        version: 4.29.1
+      rollup-plugin-typegpu:
+        specifier: ^0.0.0
+        version: 0.0.0
+      typegpu:
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu'
+
+  packages/typegpu-sdf:
     devDependencies:
       '@rollup/plugin-terser':
         specifier: ^0.4.4

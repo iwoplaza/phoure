@@ -43,6 +43,7 @@
     "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu",
     "@typegpu/color": "workspace:*",
     "@typegpu/common": "workspace:*",
+    "@typegpu/sdf": "workspace:*",
     "phoure": "workspace:*",
     "wgpu-matrix": "^3.3.0"
   }

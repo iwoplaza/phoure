@@ -1,5 +1,5 @@
 import { MarchParams, ShapeContext } from '@/lib-ray-marching';
-import { sphere } from '@/lib-sdf';
+import { sphere } from '@typegpu/sdf';
 import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 

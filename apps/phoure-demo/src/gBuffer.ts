@@ -17,27 +17,13 @@ export class GBuffer {
   readonly upscaledView: GPUTextureView;
   readonly auxView: GPUTextureView;
 
-  targets = [
-    // blurred
-    { format: 'rgba8unorm' },
-    // normal.xy, albedo_luminance, emission_luminance
-    { format: 'rgba16float' },
-  ] as const;
-
-  auxClearValue = {
-    r: 0, // normal.x
-    g: 0, // normal.y
-    b: 0, // albedo_luminance
-    a: 0, // emission_luminance
-  } as const;
-
   quarterSize: [number, number];
 
   constructor(
     root: ExperimentalTgpuRoot,
     private _size: [number, number],
   ) {
-    this.quarterSize = [Math.floor(_size[0] / 4), Math.floor(_size[1] / 4)];
+    this.quarterSize = [_size[0] >> 2, _size[1] >> 2];
 
     this.quarterATexture = root.device.createTexture({
       size: this.quarterSize,

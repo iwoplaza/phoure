@@ -1,7 +1,12 @@
+// !!!
+// TODO: Compare squares of values, not the values themselves
+// !!!
+
 import { MarchParams, ShapeContext } from '@/lib-ray-marching';
 import { sphere } from '@typegpu/sdf';
 import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
+import { min } from 'typegpu/std';
 
 export const Material = d.struct({
   albedo: d.vec3f,
@@ -11,34 +16,26 @@ export const Material = d.struct({
 
 // const getTime = tgpu.accessor(d.f32);
 
-const objSdfShell = tgpu.fn([d.vec3f], d.f32);
+const sdfShell = tgpu.fn([d.vec3f], d.f32);
 
-const objLeftBlobPos = d.vec3f(-0.3, -0.2, 0);
-
-const objLeftBlob = tgpu.fn([d.vec3f], d.f32).does((pos) => {
-  return sphere(pos, objLeftBlobPos, 0.2);
-});
+const objLeftBlob = sdfShell.does((pos) =>
+  sphere(pos, d.vec3f(-0.3, -0.2, 0), 0.2),
+);
 
 // ANIMATED LIGHT
 // const objCenterBlob = wgsl.fn`(pos: vec3f) -> f32 {
 //   return ${sdf.sphere}(pos, vec3(-0.3, 0.7 + sin(${timeUniform} * 0.001) * 0.4, -2.), 0.2);
 // }`.$name('obj_center_blob');
 
-const objCenterBlob = objSdfShell
-  .does(/* wgsl */ `(pos: vec3f) -> f32 {
-    return sphere(pos, vec3(-0.3, 0.4, 0.4), 0.2);
-  }`)
-  .$uses({ sphere });
+const objCenterBlob = sdfShell.does((pos) =>
+  sphere(pos, d.vec3f(-0.3, 0.4, 0.4), 0.2),
+);
 
-const objRightBlob = objSdfShell
-  .does(/* wgsl */ `(pos: vec3f) -> f32 {
-    return sphere(pos, vec3(0.4, 0.2, 0.), 0.4);
-  }`)
-  .$uses({ sphere });
+const objRightBlob = sdfShell.does((pos) =>
+  sphere(pos, d.vec3f(0.4, 0.2, 0), 0.4),
+);
 
-const objFloor = objSdfShell.does(/* wgsl */ `(pos: vec3f) -> f32 {
-  return pos.y + 0.3;
-}`);
+const objFloor = sdfShell.does((pos) => pos.y + 0.3);
 
 const matFloor = tgpu
   .fn([d.vec3f, /* TODO: ptr */ Material])
@@ -54,36 +51,33 @@ const matFloor = tgpu
 
 export const FAR = 100;
 
-export const worldSdf = tgpu
-  .fn([d.vec3f], d.f32)
-  .does(/* wgsl */ `(pos: vec3f) -> f32 {
-    var min_dist: f32 = FAR;
+export const worldSdf = sdfShell.does((pos) => {
+  let min_dist = d.f32(FAR);
 
-    min_dist = min(min_dist, objLeftBlob(pos));
-    min_dist = min(min_dist, objCenterBlob(pos));
-    min_dist = min(min_dist, objRightBlob(pos));
-    min_dist = min(min_dist, objFloor(pos));
+  min_dist = min(min_dist, objLeftBlob(pos));
+  min_dist = min(min_dist, objCenterBlob(pos));
+  min_dist = min(min_dist, objRightBlob(pos));
+  min_dist = min(min_dist, objFloor(pos));
 
-    return min_dist;
-  }`)
-  .$uses({ FAR, objLeftBlob, objCenterBlob, objRightBlob, objFloor });
+  return min_dist;
+});
 
 // MATERIALS
 
 export const skyColor = tgpu
   .fn([d.vec3f], d.vec3f)
   .does(/* wgsl */ `(dir: vec3f) -> vec3f {
-  let t = pow(min(abs(dir.y) * 4, 1.), 0.4);
-  
-  let uv = floor(30.0 * dir.xy);
-  let c = 0.2 + 0.5 * ((uv.x + uv.y) - 2.0 * floor((uv.x + uv.y) / 2.0));
+    let t = pow(min(abs(dir.y) * 4, 1.), 0.4);
+    
+    let uv = floor(30.0 * dir.xy);
+    let c = 0.2 + 0.5 * ((uv.x + uv.y) - 2.0 * floor((uv.x + uv.y) / 2.0));
 
-  return mix(
-    vec3f(0.7, 0.7, 0.75), // horizon
-    vec3f(0.35, 0.4, 0.6),
-    t,
-  );
-}`);
+    return mix(
+      vec3f(0.7, 0.7, 0.75), // horizon
+      vec3f(0.35, 0.4, 0.6),
+      t,
+    );
+  }`);
 
 export const worldMat = tgpu
   .fn([d.vec3f, ShapeContext, /* TODO: ptr */ Material])

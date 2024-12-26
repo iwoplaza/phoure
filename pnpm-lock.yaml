@@ -75,8 +75,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.10)
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
       wgpu-matrix:
         specifier: ^3.3.0
         version: 3.3.0
@@ -103,8 +103,8 @@ importers:
         specifier: ^8.4.24
         version: 8.4.41
       rollup-plugin-typegpu:
-        specifier: ^0.0.0
-        version: 0.0.0
+        specifier: ^0.0.1
+        version: 0.0.1
       tailwindcss:
         specifier: ^3.3.2
         version: 3.4.10
@@ -140,11 +140,11 @@ importers:
         specifier: ^4.29.1
         version: 4.29.1
       rollup-plugin-typegpu:
-        specifier: ^0.0.0
-        version: 0.0.0
+        specifier: ^0.0.1
+        version: 0.0.1
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
 
   packages/typegpu-color:
     devDependencies:
@@ -158,11 +158,11 @@ importers:
         specifier: ^4.29.1
         version: 4.29.1
       rollup-plugin-typegpu:
-        specifier: ^0.0.0
-        version: 0.0.0
+        specifier: ^0.0.1
+        version: 0.0.1
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
 
   packages/typegpu-common:
     devDependencies:
@@ -176,11 +176,11 @@ importers:
         specifier: ^4.29.1
         version: 4.29.1
       rollup-plugin-typegpu:
-        specifier: ^0.0.0
-        version: 0.0.0
+        specifier: ^0.0.1
+        version: 0.0.1
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
 
   packages/typegpu-sdf:
     devDependencies:
@@ -194,11 +194,11 @@ importers:
         specifier: ^4.29.1
         version: 4.29.1
       rollup-plugin-typegpu:
-        specifier: ^0.0.0
-        version: 0.0.0
+        specifier: ^0.0.1
+        version: 0.0.1
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
 
 packages:
 
@@ -1740,7 +1740,7 @@ packages:
     peerDependencies:
       typegpu: ^0.3.0
     dependencies:
-      typegpu: '@pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu'
+      typegpu: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
     dev: false
 
   /@types/babel__core@7.20.5:
@@ -2228,7 +2228,7 @@ packages:
   /estree-walker@3.0.3:
     resolution: {integrity: sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==}
     dependencies:
-      '@types/estree': 1.0.5
+      '@types/estree': 1.0.6
     dev: true
 
   /execa@8.0.1:
@@ -2839,12 +2839,12 @@ packages:
     resolution: {integrity: sha512-U9nH88a3fc/ekCF1l0/UP1IosiuIjyTh7hBvXVMHYgVcfGvt897Xguj2UOLDeI5BG2m7/uwyaLVT6fbtCwTyzw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
 
-  /rollup-plugin-typegpu@0.0.0:
-    resolution: {integrity: sha512-ZlafYIdPUL7woJS8NdPgovzcCPnyYOTFwUSvRdHhhLqO+QrJnHZKRYDV/W+B+jC5S7Zvokw234iBvYUY2djaKw==}
+  /rollup-plugin-typegpu@0.0.1:
+    resolution: {integrity: sha512-gnzgUFoztNDIht/ij+vf0KXB3ioMQazHAm7e12tIC12PwZXa+IA0JmAQ+CiI4VcK5l5W9A+pTdKf7psGTLHzFQ==}
     dependencies:
       estree-walker: 3.0.3
       magic-string: 0.30.17
-      tinyest-for-wgsl: 0.0.0
+      tinyest-for-wgsl: 0.1.0-alpha.0
     dev: true
 
   /rollup@3.29.4:
@@ -3087,8 +3087,8 @@ packages:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
     dev: true
 
-  /tinyest-for-wgsl@0.0.0:
-    resolution: {integrity: sha512-n7jbDxxfhvpJTGpILFKjsIqwy3RgRjYxekCa61ZnVO+Wh74LcLJ5Iuo7XLo7hiOMQFg4TXt6U/6OWP8uQit0uw==}
+  /tinyest-for-wgsl@0.1.0-alpha.0:
+    resolution: {integrity: sha512-8n/tWdTwmaxL3QGnkec0GuOxNGevm/NnGXPpbRa2DPqkk36uQEwPsXxfGoHihRXsIAMpWjWDRpOpy3OZ6f+0EQ==}
     engines: {node: '>=12.20.0'}
     dependencies:
       tinyest: 0.1.0-alpha.0
@@ -3096,6 +3096,11 @@ packages:
 
   /tinyest@0.1.0-alpha.0:
     resolution: {integrity: sha512-jbq88/BGSd+mEXxZ81HdtnCRYYwaNCnF0Wt4hJDxkIRS5bi03N/I29R5l97UcNkgYobMom+AQlB4A1mLtcm1EQ==}
+    engines: {node: '>=12.20.0'}
+    dev: true
+
+  /tinyest@0.1.0-alpha.1:
+    resolution: {integrity: sha512-rTi8MVYhCYxWnk1D3EORy3Dmy0k7QL6ihSK4qA74I4vkGvUkkIaqOzZatkD6fag/yMF3MJYsb1hmEZuoliizgA==}
     engines: {node: '>=12.20.0'}
 
   /tinypool@0.8.4:
@@ -3397,11 +3402,11 @@ packages:
     engines: {node: '>=12.20'}
     dev: true
 
-  '@pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu':
-    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu}
+  '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu':
+    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu}
     name: typegpu
     version: 0.2.0
     engines: {node: '>=12.20.0'}
     dependencies:
-      tinyest: 0.1.0-alpha.0
+      tinyest: 0.1.0-alpha.1
       typed-binary: 4.3.1

@@ -27,8 +27,8 @@
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.1.2",
     "rollup": "^4.29.1",
-    "rollup-plugin-typegpu": "^0.0.0",
-    "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/a04e44c4/typegpu"
+    "rollup-plugin-typegpu": "^0.0.1",
+    "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu"
   },
   "peerDependencies": {
     "typegpu": "^0.3.0"

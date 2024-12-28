@@ -7,6 +7,8 @@ import { PerformanceManager } from '@/PerformanceManager';
 import {
   autoRotateControlAtom,
   displayModeAtom,
+  fixedTimestepAtom,
+  fixedTimestepEnabledAtom,
   measurePerformanceAtom,
   targetResolutionAtom,
 } from '../controlAtoms';
@@ -131,10 +133,6 @@ export const GameEngine = (
     });
 
     function frame() {
-      if (destroyed) {
-        return;
-      }
-
       noteFrame();
 
       const displayMode = store.get(displayModeAtom);
@@ -185,10 +183,22 @@ export const GameEngine = (
           (store.get(accumulatedLayersAtom) + 1) as SetStateAction<number>,
         );
       }
-      requestAnimationFrame(frame);
     }
 
-    requestAnimationFrame(frame);
+    function run() {
+      if (destroyed) {
+        return;
+      }
+
+      frame();
+      if (store.get(fixedTimestepEnabledAtom)) {
+        setTimeout(run, store.get(fixedTimestepAtom) * 1000);
+      } else {
+        requestAnimationFrame(run);
+      }
+    }
+
+    run();
   })().catch((e) => {
     if (e instanceof AlreadyDestroyedError) {
       // Expected to happen

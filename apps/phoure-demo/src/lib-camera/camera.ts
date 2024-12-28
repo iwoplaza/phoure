@@ -8,7 +8,9 @@ import tgpu, {
 import { mat4, vec3 } from 'wgpu-matrix';
 
 import {
+  autoCameraOrientation,
   autoRotateControlAtom,
+  autoRotateSpeedAtom,
   cameraFovControlAtom,
   cameraOrientationControlAtom,
   cameraYControlAtom,
@@ -57,19 +59,31 @@ export const constructRayDir = tgpu
 export class Camera {
   public readonly cameraBuffer: TgpuBuffer<typeof CameraStruct> & Uniform;
 
+  private _lastTime = Date.now();
+
   constructor(root: ExperimentalTgpuRoot) {
     this.cameraBuffer = root.createBuffer(CameraStruct).$usage('uniform');
   }
 
   update() {
-    // const upVector = vec3.fromValues(0, 1, 0);
+    const now = Date.now();
+    const dt = (now - this._lastTime) / 1000;
+    this._lastTime = now;
 
     const invViewMatrix = mat4.identity(d.mat4x4f());
 
-    // const rad = 2.5;
+    const manualOrientation =
+      (store.get(cameraOrientationControlAtom) / 180) * Math.PI;
+    const autoOrientation = (store.get(autoCameraOrientation) / 180) * Math.PI;
+
     const rad = store.get(autoRotateControlAtom)
-      ? Math.PI * (Date.now() / 5000)
-      : (store.get(cameraOrientationControlAtom) / 180) * Math.PI;
+      ? autoOrientation
+      : manualOrientation;
+
+    store.set(
+      autoCameraOrientation,
+      store.get(autoCameraOrientation) + store.get(autoRotateSpeedAtom) * dt,
+    );
 
     // transforming the camera
 

@@ -3,11 +3,14 @@ import {
   type DisplayMode,
   DisplayModes,
   autoRotateControlAtom,
+  autoRotateSpeedAtom,
   cameraFovControlAtom,
   cameraOrientationControlAtom,
   cameraYControlAtom,
   cameraZoomControlAtom,
   displayModeAtom,
+  fixedTimestepAtom,
+  fixedTimestepEnabledAtom,
   targetResolutionAtom,
 } from '@/controlAtoms';
 import type { CheckedState } from '@radix-ui/react-checkbox';
@@ -67,7 +70,7 @@ function SliderControl(
   return (
     <>
       <ControlLabel htmlFor={id}>{label}</ControlLabel>
-      <div className="justify-self-stretch gap-2 flex">
+      <div className="justify-self-stretch gap-2 flex w-[180px]">
         <Slider
           {...rest}
           value={[value]}
@@ -85,7 +88,8 @@ function CheckboxControl(props: {
   label: string;
   valueAtom: WritableAtom<
     boolean,
-    [SetStateAction<boolean | typeof RESET>],
+    // biome-ignore lint/suspicious/noExplicitAny: <does not really matter>
+    [boolean | any],
     void
   >;
 }) {
@@ -181,68 +185,83 @@ function TargetResolutionControl() {
 
 export function ControlsSidebar() {
   return (
-    <Card className="m-4 flex flex-col max-w-96">
-      <CardHeader>
-        <img className="h-12" src="/phoure-logo-light.svg" alt="thoure logo" />
-        <h1 className="hidden">thoure</h1>
-        <h2 className="font-poppins text-xs text-center text-slate-700">
-          Ethical AI upscaling for games.
-        </h2>
+    <Card className="flex flex-col max-w-96 rounded-l-none">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <img className="h-8" src="/phoure-logo-light.svg" alt="phoure logo" />
+        <h1 className="hidden">phoure</h1>
       </CardHeader>
       <CardContent className="grow">
-        <p className="text-sm text-justify mt-3 mb-10">
-          The goal of <strong>phoure</strong> is to be an upscaling solution
-          that does not infringe on the rights of artists. Try it out in this
-          live demo.
-        </p>
         <div className="grid grid-cols-[1fr,auto] gap-y-2 gap-x-4 justify-items-end place-items-center">
           <DisplayModeControl />
           <TargetResolutionControl />
-          <SliderControl
-            label="Camera orientation"
-            valueAtom={cameraOrientationControlAtom}
-            max={360}
-          />
-          <SliderControl
-            label="Camera Y"
-            valueAtom={cameraYControlAtom}
-            min={-0.2}
-            step={0.01}
-            max={1}
-          />
-          <SliderControl
-            label="Camera Zoom"
-            valueAtom={cameraZoomControlAtom}
-            min={1}
-            step={0.01}
-            max={4}
-          />
-          <SliderControl
-            label="Camera FOV"
-            valueAtom={cameraFovControlAtom}
-            min={20}
-            step={1}
-            max={170}
-          />
-          <CheckboxControl
-            label="Auto rotate"
-            valueAtom={autoRotateControlAtom}
-          />
+          <details className="w-full col-span-2">
+            <summary>Time</summary>
+            <div className="grid grid-cols-[1fr,auto] gap-y-2 gap-x-4 justify-items-end place-items-center">
+              <CheckboxControl
+                label="Fixed timestep"
+                valueAtom={fixedTimestepEnabledAtom}
+              />
+              <SliderControl
+                label="Seconds per frame"
+                valueAtom={fixedTimestepAtom}
+                min={0.1}
+                step={0.1}
+                max={2}
+              />
+            </div>
+          </details>
+          <details className="w-full col-span-2">
+            <summary>Camera</summary>
+
+            <div className="grid grid-cols-[1fr,auto] gap-y-2 gap-x-4 justify-items-end place-items-center">
+              <SliderControl
+                label="Camera orientation"
+                valueAtom={cameraOrientationControlAtom}
+                max={360}
+              />
+              <SliderControl
+                label="Camera Y"
+                valueAtom={cameraYControlAtom}
+                min={-0.2}
+                step={0.01}
+                max={1}
+              />
+              <SliderControl
+                label="Camera Zoom"
+                valueAtom={cameraZoomControlAtom}
+                min={1}
+                step={0.01}
+                max={4}
+              />
+              <SliderControl
+                label="Camera FOV"
+                valueAtom={cameraFovControlAtom}
+                min={20}
+                step={1}
+                max={170}
+              />
+              <CheckboxControl
+                label="Auto rotate"
+                valueAtom={autoRotateControlAtom}
+              />
+              <SliderControl
+                label="Auto rotate speed"
+                valueAtom={autoRotateSpeedAtom}
+                min={0.5}
+                step={0.01}
+                max={100}
+              />
+            </div>
+          </details>
+
           {/* <CheckboxControl
             label="Measure performance"
             valueAtom={measurePerformanceAtom}
           /> */}
         </div>
       </CardContent>
-      <CardFooter className="grow-0 shrink flex justify-between items-center text-slate-500">
+      <CardFooter className="grow-0 shrink flex justify-center items-center text-slate-500">
         <span className="text-sm">© Iwo Plaza 2024</span>
-        <a
-          href="https://github.com/iwoplaza/phoure"
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          <img src="/github-icon.svg" alt="GitHub logo" />
-        </a>
       </CardFooter>
     </Card>
   );

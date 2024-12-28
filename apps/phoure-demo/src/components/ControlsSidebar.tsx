@@ -1,3 +1,14 @@
+import {
+  type SetStateAction,
+  type WritableAtom,
+  useAtom,
+  useSetAtom,
+} from 'jotai';
+import type { RESET } from 'jotai/utils';
+import { useCallback, useId } from 'react';
+import type { CheckedState } from '@radix-ui/react-checkbox';
+import type { SliderProps } from '@radix-ui/react-slider';
+
 import { accumulatedLayersAtom } from '@/GameEngine/sdfRenderer/sdfRenderer';
 import {
   type DisplayMode,
@@ -13,17 +24,6 @@ import {
   fixedTimestepEnabledAtom,
   targetResolutionAtom,
 } from '@/controlAtoms';
-import type { CheckedState } from '@radix-ui/react-checkbox';
-import type { SliderProps } from '@radix-ui/react-slider';
-import {
-  type SetStateAction,
-  type WritableAtom,
-  useAtom,
-  useSetAtom,
-} from 'jotai';
-import type { RESET } from 'jotai/utils';
-import { useCallback, useId } from 'react';
-import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import {
@@ -34,10 +34,17 @@ import {
   SelectValue,
 } from './ui/select';
 import { Slider } from './ui/slider';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+} from './ui/sidebar';
 
 function ControlLabel(props: { htmlFor: string; children: string }) {
   return (
-    <div className="min-h-[3rem] flex items-center">
+    <div className="min-h-[2rem] flex items-center">
       <Label htmlFor={props.htmlFor}>{props.children}</Label>
     </div>
   );
@@ -69,16 +76,18 @@ function SliderControl(
 
   return (
     <>
-      <ControlLabel htmlFor={id}>{label}</ControlLabel>
-      <div className="justify-self-stretch gap-2 flex w-[180px]">
-        <Slider
-          {...rest}
-          value={[value]}
-          onValueChange={onValueChange}
-          className="grow"
-          id={id}
-        />
-        <p className="min-w-12 text-right">{value}</p>
+      <div className="col-span-2">
+        <ControlLabel htmlFor={id}>{label}</ControlLabel>
+        <div className="flex justify-self-stretch gap-2">
+          <Slider
+            {...rest}
+            value={[value]}
+            onValueChange={onValueChange}
+            className="w-[180px]"
+            id={id}
+          />
+          <p className="min-w-12 text-right">{value}</p>
+        </div>
       </div>
     </>
   );
@@ -185,17 +194,18 @@ function TargetResolutionControl() {
 
 export function ControlsSidebar() {
   return (
-    <Card className="flex flex-col max-w-96 rounded-l-none">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <img className="h-8" src="/phoure-logo-light.svg" alt="phoure logo" />
-        <h1 className="hidden">phoure</h1>
-      </CardHeader>
-      <CardContent className="grow">
-        <div className="grid grid-cols-[1fr,auto] gap-y-2 gap-x-4 justify-items-end place-items-center">
-          <DisplayModeControl />
-          <TargetResolutionControl />
-          <details className="w-full col-span-2">
-            <summary>Time</summary>
+    <Sidebar side="left" variant="sidebar">
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Rendering</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <DisplayModeControl />
+            <TargetResolutionControl />
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Time controls</SidebarGroupLabel>
+          <SidebarGroupContent>
             <div className="grid grid-cols-[1fr,auto] gap-y-2 gap-x-4 justify-items-end place-items-center">
               <CheckboxControl
                 label="Fixed timestep"
@@ -209,10 +219,11 @@ export function ControlsSidebar() {
                 max={2}
               />
             </div>
-          </details>
-          <details className="w-full col-span-2">
-            <summary>Camera</summary>
-
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Camera controls</SidebarGroupLabel>
+          <SidebarGroupContent>
             <div className="grid grid-cols-[1fr,auto] gap-y-2 gap-x-4 justify-items-end place-items-center">
               <SliderControl
                 label="Camera orientation"
@@ -252,17 +263,14 @@ export function ControlsSidebar() {
                 max={100}
               />
             </div>
-          </details>
 
-          {/* <CheckboxControl
+            {/* <CheckboxControl
             label="Measure performance"
             valueAtom={measurePerformanceAtom}
           /> */}
-        </div>
-      </CardContent>
-      <CardFooter className="grow-0 shrink flex justify-center items-center text-slate-500">
-        <span className="text-sm">© Iwo Plaza 2024</span>
-      </CardFooter>
-    </Card>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
   );
 }

@@ -18,20 +18,20 @@ export const measurePerformanceAtom = atomWithUrl('perf', false);
 // Camera controls
 // -------------------
 
-export const cameraOrientationControlAtom = atomWithUrl('cyaw', 0);
+export const cameraOrientationControlAtom = atomWithUrl('cyaw', 225);
 export const cameraYControlAtom = atomWithUrl('cy', 0);
-export const cameraZoomControlAtom = atomWithUrl('cd', 2);
-export const cameraFovControlAtom = atomWithUrl('fov', 90);
+export const cameraZoomControlAtom = atomWithUrl('cd', 1.5);
+export const cameraFovControlAtom = atomWithUrl('fov', 60);
 
 export const autoCameraOrientation = atom(0);
 
 export const autoRotateSpeedAtom = atomWithUrl(
   'crot',
-  0.5, // degrees per second
+  10, // degrees per second
 );
 
 export const autoRotateControlAtom = (() => {
-  const innerAtom = atomWithUrl('cauto', true);
+  const innerAtom = atomWithUrl('cauto', false);
 
   return atom(
     (get) => get(innerAtom),
@@ -49,7 +49,7 @@ export const autoRotateControlAtom = (() => {
 // Rendering controls
 // -------------------
 
-export const targetResolutionAtom = atomWithUrl('res', 256);
+export const targetResolutionAtom = atomWithUrl('res', 512 /* pixels */);
 
 export const displayModeAtom = atomWithUrl<DisplayMode>('mode', 'upscaled');
 
@@ -57,5 +57,5 @@ export const displayModeAtom = atomWithUrl<DisplayMode>('mode', 'upscaled');
 // Time controls
 // -------------------
 
-export const fixedTimestepEnabledAtom = atomWithUrl('tfix', true);
+export const fixedTimestepEnabledAtom = atomWithUrl('tfix', false);
 export const fixedTimestepAtom = atomWithUrl('tstep', 0.3 /* seconds */);

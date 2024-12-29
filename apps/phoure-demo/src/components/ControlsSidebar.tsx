@@ -1,12 +1,6 @@
 import type { CheckedState } from '@radix-ui/react-checkbox';
 import type { SliderProps } from '@radix-ui/react-slider';
-import {
-  type SetStateAction,
-  type WritableAtom,
-  useAtom,
-  useSetAtom,
-} from 'jotai';
-import type { RESET } from 'jotai/utils';
+import { type WritableAtom, useAtom, useSetAtom } from 'jotai';
 import { ChevronDown } from 'lucide-react';
 import { useCallback, useId } from 'react';
 
@@ -61,11 +55,7 @@ function ControlLabel(props: { htmlFor: string; children: string }) {
 function SliderControl(
   props: {
     label: string;
-    valueAtom: WritableAtom<
-      number,
-      [SetStateAction<number | typeof RESET>],
-      void
-    >;
+    valueAtom: WritableAtom<number, [number], void>;
   } & SliderProps,
 ) {
   const { label, valueAtom, ...rest } = props;
@@ -103,12 +93,7 @@ function SliderControl(
 
 function CheckboxControl(props: {
   label: string;
-  valueAtom: WritableAtom<
-    boolean,
-    // biome-ignore lint/suspicious/noExplicitAny: <does not really matter>
-    [boolean | any],
-    void
-  >;
+  valueAtom: WritableAtom<boolean, [boolean], void>;
 }) {
   const { label, valueAtom } = props;
 
@@ -123,7 +108,7 @@ function CheckboxControl(props: {
   );
 
   return (
-    <div className="px-4 my-2 flex items-center justify-between">
+    <div className="px-4 mt-4 flex items-center justify-between">
       <ControlLabel htmlFor={id}>{label}</ControlLabel>
       <Checkbox checked={checked} onCheckedChange={onCheckedChange} id="id" />
     </div>
@@ -228,7 +213,7 @@ export function ControlsSidebar() {
           <DisplayModeControl />
           <TargetResolutionControl />
         </ControlGroup>
-        <ControlGroup label="Time controls">
+        <ControlGroup label="Time">
           <CheckboxControl
             label="Fixed timestep"
             valueAtom={fixedTimestepEnabledAtom}
@@ -241,32 +226,32 @@ export function ControlsSidebar() {
             max={2}
           />
         </ControlGroup>
-        <ControlGroup label="Camera controls">
+        <ControlGroup label="Camera">
           <SliderControl
-            label="Camera orientation"
-            valueAtom={cameraOrientationControlAtom}
-            max={360}
-          />
-          <SliderControl
-            label="Camera Y"
+            label="Up/down position"
             valueAtom={cameraYControlAtom}
             min={-0.2}
             step={0.01}
             max={1}
           />
           <SliderControl
-            label="Camera Zoom"
+            label="Distance from origin"
             valueAtom={cameraZoomControlAtom}
             min={1}
             step={0.01}
             max={4}
           />
           <SliderControl
-            label="Camera FOV"
+            label="Field of view"
             valueAtom={cameraFovControlAtom}
             min={20}
             step={1}
             max={170}
+          />
+          <SliderControl
+            label="Yaw angle"
+            valueAtom={cameraOrientationControlAtom}
+            max={360}
           />
           <CheckboxControl
             label="Auto rotate"

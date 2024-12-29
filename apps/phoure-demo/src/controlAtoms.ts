@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { atomWithStorage } from 'jotai/utils';
+import { atomWithUrl } from './atomWithUrl';
 
 export const DisplayModes = [
   { key: 'upscaled', label: 'Upscaled' },
@@ -12,31 +12,26 @@ export const DisplayModes = [
 
 export type DisplayMode = (typeof DisplayModes)[number]['key'];
 
-export const measurePerformanceAtom = atomWithStorage(
-  'MEASURE_PERFORMANCE',
-  false,
-);
+export const measurePerformanceAtom = atomWithUrl('perf', false);
 
-export const cameraOrientationControlAtom = atomWithStorage(
-  'CAMERA_ORIENTATION',
-  0,
-);
+// -------------------
+// Camera controls
+// -------------------
 
-export const cameraYControlAtom = atomWithStorage('CAMERA_Y', 0);
-
-export const cameraZoomControlAtom = atomWithStorage('CAMERA_ZOOM', 2);
-
-export const cameraFovControlAtom = atomWithStorage('CAMERA_FOV', 90);
+export const cameraOrientationControlAtom = atomWithUrl('cyaw', 0);
+export const cameraYControlAtom = atomWithUrl('cy', 0);
+export const cameraZoomControlAtom = atomWithUrl('cd', 2);
+export const cameraFovControlAtom = atomWithUrl('fov', 90);
 
 export const autoCameraOrientation = atom(0);
 
-export const autoRotateSpeedAtom = atomWithStorage(
-  'AUTO_ROTATE_SPEED',
+export const autoRotateSpeedAtom = atomWithUrl(
+  'crot',
   0.5, // degrees per second
 );
 
 export const autoRotateControlAtom = (() => {
-  const innerAtom = atomWithStorage('AUTO_ROTATE', true);
+  const innerAtom = atomWithUrl('cauto', true);
 
   return atom(
     (get) => get(innerAtom),
@@ -50,19 +45,17 @@ export const autoRotateControlAtom = (() => {
   );
 })();
 
-export const targetResolutionAtom = atomWithStorage('TARGET_RESOLUTION', 256);
+// -------------------
+// Rendering controls
+// -------------------
 
-export const displayModeAtom = atomWithStorage<DisplayMode>(
-  'DISPLAY_MODE',
-  'upscaled',
-);
+export const targetResolutionAtom = atomWithUrl('res', 256);
 
-export const fixedTimestepEnabledAtom = atomWithStorage(
-  'FIXED_TIMESTEP_ENABLED',
-  true,
-);
+export const displayModeAtom = atomWithUrl<DisplayMode>('mode', 'upscaled');
 
-export const fixedTimestepAtom = atomWithStorage(
-  'FIXED_TIMESTEP',
-  0.3 /* seconds */,
-);
+// -------------------
+// Time controls
+// -------------------
+
+export const fixedTimestepEnabledAtom = atomWithUrl('tfix', true);
+export const fixedTimestepAtom = atomWithUrl('tstep', 0.3 /* seconds */);

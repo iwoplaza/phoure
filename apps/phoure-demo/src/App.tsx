@@ -1,10 +1,10 @@
 import { Provider } from 'jotai';
 import { HeartIcon } from 'lucide-react';
 
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { ControlsSidebar } from '@/components/ControlsSidebar';
-import { Statistics } from '@/components/Statistics';
 import { NavAside } from '@/components/NavAside';
+import { Statistics } from '@/components/Statistics';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import GameViewport from './GameEngine/GameViewport';
 import { store } from './store';
 

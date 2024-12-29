@@ -1,6 +1,6 @@
 import { CircleHelpIcon } from './ui/circle-help';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 import { GithubIcon } from './ui/github';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 
 export function NavAside() {
   return (

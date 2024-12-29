@@ -1,13 +1,11 @@
-import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { type VariantProps, cva } from 'class-variance-authority';
+import * as React from 'react';
 
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { SettingsIcon } from '@/components/ui/settings';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { SettingsIcon } from '@/components/ui/settings';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -16,6 +14,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import { useCallback, useMemo } from 'react';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar:state';

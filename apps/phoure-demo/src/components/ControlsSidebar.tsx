@@ -1,3 +1,5 @@
+import type { CheckedState } from '@radix-ui/react-checkbox';
+import type { SliderProps } from '@radix-ui/react-slider';
 import {
   type SetStateAction,
   type WritableAtom,
@@ -5,10 +7,8 @@ import {
   useSetAtom,
 } from 'jotai';
 import type { RESET } from 'jotai/utils';
-import { useCallback, useId } from 'react';
-import type { CheckedState } from '@radix-ui/react-checkbox';
-import type { SliderProps } from '@radix-ui/react-slider';
 import { ChevronDown } from 'lucide-react';
+import { useCallback, useId } from 'react';
 
 import { accumulatedLayersAtom } from '@/GameEngine/sdfRenderer/sdfRenderer';
 import {
@@ -26,12 +26,12 @@ import {
   targetResolutionAtom,
 } from '@/controlAtoms';
 import { Checkbox } from './ui/checkbox';
-import { Label } from './ui/label';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from './ui/collapsible';
+import { Label } from './ui/label';
 import {
   Select,
   SelectContent,
@@ -39,7 +39,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Slider } from './ui/slider';
 import {
   Sidebar,
   SidebarContent,
@@ -47,6 +46,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from './ui/sidebar';
+import { Slider } from './ui/slider';
 
 function ControlLabel(props: { htmlFor: string; children: string }) {
   return (

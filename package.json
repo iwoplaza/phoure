@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "pnpm run -r dev:build && pnpm run -r --parallel dev:watch",
     "dev:build": "pnpm run -r dev:build",
+    "build": "pnpm run -r build",
     "test": "vitest",
     "check": "biome check",
     "fix": "biome check --write"

@@ -8,6 +8,7 @@ import type { RESET } from 'jotai/utils';
 import { useCallback, useId } from 'react';
 import type { CheckedState } from '@radix-ui/react-checkbox';
 import type { SliderProps } from '@radix-ui/react-slider';
+import { ChevronDown } from 'lucide-react';
 
 import { accumulatedLayersAtom } from '@/GameEngine/sdfRenderer/sdfRenderer';
 import {
@@ -27,6 +28,11 @@ import {
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from './ui/collapsible';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -45,7 +51,9 @@ import {
 function ControlLabel(props: { htmlFor: string; children: string }) {
   return (
     <div className="min-h-[2rem] flex items-center">
-      <Label htmlFor={props.htmlFor}>{props.children}</Label>
+      <Label className="text-xs text-slate-500" htmlFor={props.htmlFor}>
+        {props.children}
+      </Label>
     </div>
   );
 }
@@ -76,7 +84,7 @@ function SliderControl(
 
   return (
     <>
-      <div className="col-span-2">
+      <div className="px-4 my-2">
         <ControlLabel htmlFor={id}>{label}</ControlLabel>
         <div className="flex justify-self-stretch gap-2">
           <Slider
@@ -115,15 +123,10 @@ function CheckboxControl(props: {
   );
 
   return (
-    <>
+    <div className="px-4 my-2 flex items-center justify-between">
       <ControlLabel htmlFor={id}>{label}</ControlLabel>
-      <Checkbox
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        className="justify-self-start"
-        id="id"
-      />
-    </>
+      <Checkbox checked={checked} onCheckedChange={onCheckedChange} id="id" />
+    </div>
   );
 }
 
@@ -140,7 +143,7 @@ function DisplayModeControl() {
   );
 
   return (
-    <>
+    <div className="px-4 my-2">
       <ControlLabel htmlFor="display-mode">Display mode</ControlLabel>
       <Select value={displayMode} onValueChange={onValueChange}>
         <SelectTrigger className="w-[180px]" id="display-mode">
@@ -154,7 +157,7 @@ function DisplayModeControl() {
           ))}
         </SelectContent>
       </Select>
-    </>
+    </div>
   );
 }
 
@@ -171,7 +174,7 @@ function TargetResolutionControl() {
   );
 
   return (
-    <>
+    <div className="px-4">
       <ControlLabel htmlFor="target-resolution">Target resolution</ControlLabel>
       <Select value={String(targetResolution)} onValueChange={onValueChange}>
         <SelectTrigger className="w-[180px]" id="target-resolution">
@@ -188,7 +191,32 @@ function TargetResolutionControl() {
           <SelectItem value={'2048'}>2048x2048</SelectItem>
         </SelectContent>
       </Select>
-    </>
+    </div>
+  );
+}
+
+interface ControlGroupProps {
+  label: string;
+  children: React.ReactNode;
+}
+
+function ControlGroup(props: ControlGroupProps) {
+  const { label, children } = props;
+
+  return (
+    <Collapsible defaultOpen className="group/collapsible">
+      <SidebarGroup>
+        <SidebarGroupLabel asChild>
+          <CollapsibleTrigger>
+            {label}
+            <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+          </CollapsibleTrigger>
+        </SidebarGroupLabel>
+        <CollapsibleContent>
+          <SidebarGroupContent>{children}</SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
   );
 }
 
@@ -196,80 +224,62 @@ export function ControlsSidebar() {
   return (
     <Sidebar side="left" variant="sidebar">
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Rendering</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <DisplayModeControl />
-            <TargetResolutionControl />
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Time controls</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <div className="grid grid-cols-[1fr,auto] gap-y-2 gap-x-4 justify-items-end place-items-center">
-              <CheckboxControl
-                label="Fixed timestep"
-                valueAtom={fixedTimestepEnabledAtom}
-              />
-              <SliderControl
-                label="Seconds per frame"
-                valueAtom={fixedTimestepAtom}
-                min={0.1}
-                step={0.1}
-                max={2}
-              />
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Camera controls</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <div className="grid grid-cols-[1fr,auto] gap-y-2 gap-x-4 justify-items-end place-items-center">
-              <SliderControl
-                label="Camera orientation"
-                valueAtom={cameraOrientationControlAtom}
-                max={360}
-              />
-              <SliderControl
-                label="Camera Y"
-                valueAtom={cameraYControlAtom}
-                min={-0.2}
-                step={0.01}
-                max={1}
-              />
-              <SliderControl
-                label="Camera Zoom"
-                valueAtom={cameraZoomControlAtom}
-                min={1}
-                step={0.01}
-                max={4}
-              />
-              <SliderControl
-                label="Camera FOV"
-                valueAtom={cameraFovControlAtom}
-                min={20}
-                step={1}
-                max={170}
-              />
-              <CheckboxControl
-                label="Auto rotate"
-                valueAtom={autoRotateControlAtom}
-              />
-              <SliderControl
-                label="Auto rotate speed"
-                valueAtom={autoRotateSpeedAtom}
-                min={0.5}
-                step={0.01}
-                max={100}
-              />
-            </div>
-
-            {/* <CheckboxControl
-            label="Measure performance"
-            valueAtom={measurePerformanceAtom}
-          /> */}
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <ControlGroup label="Rendering">
+          <DisplayModeControl />
+          <TargetResolutionControl />
+        </ControlGroup>
+        <ControlGroup label="Time controls">
+          <CheckboxControl
+            label="Fixed timestep"
+            valueAtom={fixedTimestepEnabledAtom}
+          />
+          <SliderControl
+            label="Seconds per frame"
+            valueAtom={fixedTimestepAtom}
+            min={0.1}
+            step={0.1}
+            max={2}
+          />
+        </ControlGroup>
+        <ControlGroup label="Camera controls">
+          <SliderControl
+            label="Camera orientation"
+            valueAtom={cameraOrientationControlAtom}
+            max={360}
+          />
+          <SliderControl
+            label="Camera Y"
+            valueAtom={cameraYControlAtom}
+            min={-0.2}
+            step={0.01}
+            max={1}
+          />
+          <SliderControl
+            label="Camera Zoom"
+            valueAtom={cameraZoomControlAtom}
+            min={1}
+            step={0.01}
+            max={4}
+          />
+          <SliderControl
+            label="Camera FOV"
+            valueAtom={cameraFovControlAtom}
+            min={20}
+            step={1}
+            max={170}
+          />
+          <CheckboxControl
+            label="Auto rotate"
+            valueAtom={autoRotateControlAtom}
+          />
+          <SliderControl
+            label="Auto rotate speed"
+            valueAtom={autoRotateSpeedAtom}
+            min={0.5}
+            step={0.01}
+            max={100}
+          />
+        </ControlGroup>
       </SidebarContent>
     </Sidebar>
   );

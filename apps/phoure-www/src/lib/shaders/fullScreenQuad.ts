@@ -1,7 +1,7 @@
+import tgpu from 'typegpu';
 import { builtin, vec2f } from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
-export const fullScreenQuadVertexFn = tgpu
+export const fullScreenQuadVertexFn = tgpu['~unstable']
   .vertexFn({ idx: builtin.vertexIndex }, { pos: builtin.position, uv: vec2f })
   .does(/* wgsl */ `(@builtin(vertex_index) idx: u32) -> VertexOutput {
     const SCREEN_RECT = array<vec2f, 6>(

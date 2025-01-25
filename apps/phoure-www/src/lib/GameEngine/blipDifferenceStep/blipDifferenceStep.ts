@@ -1,15 +1,15 @@
-import { fullScreenQuadVertexFn } from '@/shaders/fullScreenQuad';
 import * as d from 'typegpu/data';
-import tgpu, { type ExperimentalTgpuRoot } from 'typegpu/experimental';
+import tgpu, { type TgpuRoot } from 'typegpu';
+import { fullScreenQuadVertexFn } from '../../shaders/fullScreenQuad';
 
 type Options = {
-  root: ExperimentalTgpuRoot;
+  root: TgpuRoot;
   context: GPUCanvasContext;
   presentationFormat: GPUTextureFormat;
   textures: [() => GPUTextureView, () => GPUTextureView];
 };
 
-const fragFn = tgpu
+const fragFn = tgpu['~unstable']
   .fragmentFn({ coordFloat: d.builtin.position }, d.vec4f)
   .does(`(@builtin(position) coordFloat: vec4f) -> @location(0) vec4f {
     var coord = vec2u(floor(coordFloat.xy));
@@ -43,7 +43,7 @@ export const BlipDifferenceStep = ({
     })
     .$name('Blip Difference - Bind Group Layout');
 
-  const pipeline = root
+  const pipeline = root['~unstable']
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(fragFn, { format: presentationFormat })
     .createPipeline();

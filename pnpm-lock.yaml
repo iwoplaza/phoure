@@ -72,8 +72,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/typegpu-common
       '@typegpu/noise':
-        specifier: ^0.0.1
-        version: 0.0.1(typegpu@0.2.0)
+        specifier: ^0.0.2
+        version: 0.0.2(typegpu@0.3.2)
       '@typegpu/sdf':
         specifier: workspace:*
         version: link:../../packages/typegpu-sdf
@@ -129,8 +129,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.17)
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu'
       wgpu-matrix:
         specifier: ^3.3.0
         version: 3.3.0
@@ -164,8 +164,8 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu'
 
   packages/typegpu-color:
     devDependencies:
@@ -182,8 +182,8 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu'
 
   packages/typegpu-common:
     devDependencies:
@@ -200,8 +200,8 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu'
 
   packages/typegpu-sdf:
     devDependencies:
@@ -218,8 +218,8 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
       typegpu:
-        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu
-        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
+        specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: '@pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu'
 
 packages:
 
@@ -2422,12 +2422,12 @@ packages:
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
     dev: true
 
-  /@typegpu/noise@0.0.1(typegpu@0.2.0):
-    resolution: {integrity: sha512-VbVpZ+byaGRjdGNvuce32sCf1BLjcg9N5owMqLYEc895sUI4vzLmv/HuVZHfDuDrrFKyyqQFy2hw/LuG9GcKuQ==}
+  /@typegpu/noise@0.0.2(typegpu@0.3.2):
+    resolution: {integrity: sha512-Xakr/QTBkVKKIs8zKcywAnXSt0pxbJQUL7kELFHHcW1b4i4gnA5ebu46uTjZMuxM3+d160WcEWU9gDf3o3ubYQ==}
     peerDependencies:
-      typegpu: ^0.3.0
+      typegpu: ^0.3.2
     dependencies:
-      typegpu: '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu'
+      typegpu: '@pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu'
     dev: false
 
   /@types/acorn@4.0.6:
@@ -6903,10 +6903,10 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: false
 
-  '@pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu':
-    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu}
+  '@pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu':
+    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu}
     name: typegpu
-    version: 0.2.0
+    version: 0.3.2
     engines: {node: '>=12.20.0'}
     dependencies:
       tinyest: 0.1.0-alpha.1

@@ -1,7 +1,7 @@
 import { rgbToYcbcrMatrix, ycbcrToRgbMatrix } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
+import tgpu from 'typegpu';
 
 export const combinationLayout = tgpu
   .bindGroupLayout({
@@ -12,7 +12,7 @@ export const combinationLayout = tgpu
 
 const { blurredTexture, mendedBuffer } = combinationLayout.bound;
 
-export const combinationEntryFn = tgpu
+export const combinationEntryFn = tgpu['~unstable']
   .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
   .does(/* wgsl */ `(@builtin(position) coord_f: vec4f) -> @location(0) vec4f {
     let coord = vec2u(floor(coord_f.xy));

@@ -1,10 +1,6 @@
 import { accessViewportSize } from '@typegpu/common';
 import * as d from 'typegpu/data';
-import tgpu, {
-  type ExperimentalTgpuRoot,
-  type TgpuBuffer,
-  type Uniform,
-} from 'typegpu/experimental';
+import tgpu, { type TgpuRoot, type TgpuBuffer, type Uniform } from 'typegpu';
 import { mat4, vec3 } from 'wgpu-matrix';
 
 import {
@@ -24,11 +20,11 @@ export const CameraStruct = d.struct({
   field_of_view: d.f32,
 });
 
-export const getCameraProps = tgpu
+export const getCameraProps = tgpu['~unstable']
   .accessor(CameraStruct)
   .$name('getCameraProps');
 
-export const constructRayPos = tgpu
+export const constructRayPos = tgpu['~unstable']
   .fn([], d.vec3f)
   .does(/* wgsl */ `() -> vec3f {
     let camera = getCameraProps;
@@ -36,7 +32,7 @@ export const constructRayPos = tgpu
   }`)
   .$uses({ getCameraProps });
 
-export const constructRayDir = tgpu
+export const constructRayDir = tgpu['~unstable']
   .fn([d.vec2f], d.vec3f)
   .does(/* wgsl */ `(coord: vec2f) -> vec3f {
     let camera = getCameraProps;
@@ -61,7 +57,7 @@ export class Camera {
 
   private _lastTime = Date.now();
 
-  constructor(root: ExperimentalTgpuRoot) {
+  constructor(root: TgpuRoot) {
     this.cameraBuffer = root.createBuffer(CameraStruct).$usage('uniform');
   }
 

@@ -1,7 +1,7 @@
 import { BicubicFilter } from 'src/lib-filter';
 import { MenderStep } from 'src/lib-phoure';
 import type { SetStateAction } from 'jotai';
-import tgpu from 'typegpu/experimental';
+import tgpu from 'typegpu';
 
 import { PerformanceManager } from 'src/lib/PerformanceManager.ts';
 import {
@@ -140,7 +140,7 @@ export const GameEngine = (
       // -- Rendering the whole scene & aux.
       if (displayMode === 'traditional') {
         traditionalSdfRenderer.perform();
-        root.flush();
+        root['~unstable'].flush();
       }
 
       if (
@@ -151,7 +151,7 @@ export const GameEngine = (
         displayMode === 'upscaled'
       ) {
         sdfRenderer.perform();
-        root.flush();
+        root['~unstable'].flush();
       }
 
       // -- Upscaling the quarter-resolution render.
@@ -173,7 +173,7 @@ export const GameEngine = (
         postProcessing.perform();
       }
 
-      root.flush();
+      root['~unstable'].flush();
       gBuffer.flip();
       if (store.get(autoRotateControlAtom)) {
         store.set(accumulatedLayersAtom, 0 as SetStateAction<number>);

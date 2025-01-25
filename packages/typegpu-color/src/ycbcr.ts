@@ -1,18 +1,18 @@
 import { f32, mat3x3f, vec3f } from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
+import tgpu from 'typegpu';
 import { dot } from 'typegpu/std';
 
-const rgbToYFactor = tgpu.const(
+const rgbToYFactor = tgpu['~unstable'].const(
   vec3f,
   vec3f(0.2538745098, 0.5061058824, 0.09829019608),
 );
 
-export const convertRgbToY = tgpu
+export const convertRgbToY = tgpu['~unstable']
   .fn([vec3f], f32)
   .does((rgb) => 0.06274509804 + dot(rgb, rgbToYFactor.value))
   .$name('convert_rgb_to_y');
 
-export const rgbToYcbcrMatrix = tgpu.const(
+export const rgbToYcbcrMatrix = tgpu['~unstable'].const(
   mat3x3f,
   mat3x3f(
     vec3f(0.299, 0.587, 0.114),
@@ -21,7 +21,7 @@ export const rgbToYcbcrMatrix = tgpu.const(
   ),
 );
 
-export const ycbcrToRgbMatrix = tgpu.const(
+export const ycbcrToRgbMatrix = tgpu['~unstable'].const(
   mat3x3f,
   mat3x3f(
     vec3f(1.0, 0, 1.402),

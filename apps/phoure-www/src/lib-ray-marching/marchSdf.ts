@@ -1,24 +1,24 @@
-import { f32, struct, u32, vec3f } from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
+import { f32, ptrFn, struct, u32, vec3f } from 'typegpu/data';
+import tgpu from 'typegpu';
 import { ShapeContext } from './types';
 
-const sampleSdfShell = tgpu.fn([vec3f], f32);
+const sampleSdfShell = tgpu['~unstable'].fn([vec3f], f32);
 type SampleSdf = ReturnType<(typeof sampleSdfShell)['does']>;
 
-const defaultGetSurfaceThreshold = tgpu
+const defaultGetSurfaceThreshold = tgpu['~unstable']
   .fn([ShapeContext], f32)
   .does((_ctx) => 0.001);
 
 export const MarchParams = {
-  maxSteps: tgpu.slot(500),
+  maxSteps: tgpu['~unstable'].slot(500),
 
   /**
    * The distance from the camera at which the sky should be drawn instead of the world.
    */
-  farPlane: tgpu.slot(100),
+  farPlane: tgpu['~unstable'].slot(100),
 
-  getSurfaceThreshold: tgpu.slot(defaultGetSurfaceThreshold),
-  sampleSdf: tgpu.slot<SampleSdf>(),
+  getSurfaceThreshold: tgpu['~unstable'].slot(defaultGetSurfaceThreshold),
+  sampleSdf: tgpu['~unstable'].slot<SampleSdf>(),
 };
 
 export const MarchResult = struct({
@@ -26,8 +26,8 @@ export const MarchResult = struct({
   position: vec3f,
 });
 
-export const march = tgpu
-  .fn([/* TODO: ptr */ ShapeContext, u32, /* TODO: ptr */ MarchResult])
+export const march = tgpu['~unstable']
+  .fn([ptrFn(ShapeContext), u32, ptrFn(MarchResult)])
   .does(`(ctx: ptr<function, ShapeContext>, limit: u32, out: ptr<function, MarchResult>) {
     var pos = (*ctx).rayPos;
     var prev_dist = -1.;

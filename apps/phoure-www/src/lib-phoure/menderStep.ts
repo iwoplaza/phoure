@@ -1,10 +1,7 @@
 import { convertRgbToY } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
 import * as d from 'typegpu/data';
-import tgpu, {
-  asUniform,
-  type ExperimentalTgpuRoot,
-} from 'typegpu/experimental';
+import tgpu, { unstable_asUniform, type TgpuRoot } from 'typegpu';
 
 import {
   convolveFn,
@@ -25,13 +22,15 @@ const FIRST_DEPTH = 8;
 const SECOND_DEPTH = 8;
 
 type Options = {
-  root: ExperimentalTgpuRoot;
+  root: TgpuRoot;
   gBuffer: GBuffer;
   targetTexture: () => GPUTextureView;
 };
 
-const reluSlot = tgpu.slot<boolean>().$name('relu');
-const inputFromGBufferSlot = tgpu.slot<boolean>().$name('input_from_gbuffer');
+const reluSlot = tgpu['~unstable'].slot<boolean>().$name('relu');
+const inputFromGBufferSlot = tgpu['~unstable']
+  .slot<boolean>()
+  .$name('input_from_gbuffer');
 const BLOCK_SIZE = 8;
 
 // const convolveLocalFn = wgsl.fn`(local: vec2u, result: ptr<function, array<f32, ${outChannelsSlot}>>) {
@@ -64,13 +63,9 @@ const ioLayout = tgpu.bindGroupLayout({
 
 const { weights, biases } = layerLayout.bound;
 
-const sampleGlobal = tgpu.derived(() => {
-  return tgpu
-    .fn([
-      d.i32,
-      d.i32,
-      /* TODO: ptr */ d.arrayOf(d.vec4f, inChannelsQuarter.value),
-    ])
+const sampleGlobal = tgpu['~unstable'].derived(() => {
+  return tgpu['~unstable']
+    .fn([d.i32, d.i32, d.ptrFn(d.arrayOf(d.vec4f, inChannelsQuarter.value))])
     .does(`(x: i32, y: i32, result: ptr<function, array<vec4f, inChannelsQuarter>>) {
       let canvasSize = accessViewportSize;
       let coord = vec2u(
@@ -127,9 +122,9 @@ const sampleGlobal = tgpu.derived(() => {
     .$name('sample_global');
 });
 
-const applyReLU = tgpu.derived(() => {
-  return tgpu
-    .fn([/* TODO: ptr */ d.arrayOf(d.f32, outChannelsSlot.value)])
+const applyReLU = tgpu['~unstable'].derived(() => {
+  return tgpu['~unstable']
+    .fn([d.ptrFn(d.arrayOf(d.f32, outChannelsSlot.value))])
     .does(`(result: ptr<function, array<f32, outChannelsSlot>>) {
       for (var i = 0u; i < outChannelsSlot; i++) {
         (*result)[i] = max(0, (*result)[i]);
@@ -139,7 +134,7 @@ const applyReLU = tgpu.derived(() => {
     .$name('apply_relu');
 });
 
-const readKernel = tgpu
+const readKernel = tgpu['~unstable']
   .fn([d.u32], d.vec4f)
   .does((idx) => {
     return weights.value[idx];
@@ -151,7 +146,7 @@ const menderConvolveFn = convolveFn({
   kernelReader: readKernel,
 });
 
-const entryComputeFn = tgpu
+const entryComputeFn = tgpu['~unstable']
   .computeFn([], { workgroupSize: [BLOCK_SIZE, BLOCK_SIZE] })
   .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
     var result: array<f32, OUT_CHANNELS>;
@@ -230,14 +225,14 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
     inputFromGBuffer: boolean;
   }) => {
     return (
-      root
+      root['~unstable']
         // filling slots
         .with(kernelRadiusSlot, options.kernelRadius)
         .with(inChannelsSlot, options.inChannels)
         .with(outChannelsSlot, options.outChannels)
         .with(reluSlot, options.relu)
         .with(inputFromGBufferSlot, options.inputFromGBuffer)
-        .with(accessViewportSize, asUniform(viewportSizeBuffer))
+        .with(accessViewportSize, unstable_asUniform(viewportSizeBuffer))
         // ---
         .withCompute(entryComputeFn)
         .createPipeline()
@@ -300,8 +295,8 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
   // Combination pass
   // ---
 
-  const combinationPipeline = root
-    .with(accessViewportSize, asUniform(viewportSizeBuffer))
+  const combinationPipeline = root['~unstable']
+    .with(accessViewportSize, unstable_asUniform(viewportSizeBuffer))
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(combinationEntryFn, { format: 'rgba8unorm' })
     .createPipeline();

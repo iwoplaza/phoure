@@ -1,5 +1,5 @@
 import { f32 } from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
+import tgpu from 'typegpu';
 
 /**
  * Inflates the passed in field, and makes it rounded as
@@ -7,7 +7,7 @@ import tgpu from 'typegpu/experimental';
 
  * @returns 3d sdf
  */
-export const inflate = tgpu
+export const inflate = tgpu['~unstable']
   .fn([f32, f32], f32)
   .does((d, r) => d - r)
   .$name('op_inflate');

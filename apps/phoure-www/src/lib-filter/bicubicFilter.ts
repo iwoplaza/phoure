@@ -1,5 +1,5 @@
 import { builtin, vec2f, vec4f } from 'typegpu/data';
-import tgpu, { type ExperimentalTgpuRoot } from 'typegpu/experimental';
+import tgpu, { type TgpuRoot } from 'typegpu';
 
 const layout = tgpu
   .bindGroupLayout({
@@ -11,7 +11,7 @@ const layout = tgpu
   })
   .$name('Resample - external bind group layout');
 
-const fullScreenQuadVertexFn = tgpu
+const fullScreenQuadVertexFn = tgpu['~unstable']
   .vertexFn(
     { idx: builtin.vertexIndex },
     {
@@ -62,7 +62,7 @@ const fullScreenQuadVertexFn = tgpu
  * Implementation based on:
  * https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-20-fast-third-order-texture-filtering
  */
-const resampleCubic = tgpu
+const resampleCubic = tgpu['~unstable']
   .fragmentFn(
     {
       pos: builtin.position,
@@ -104,7 +104,7 @@ const resampleCubic = tgpu
  * @param device
  * @param samples How frequently to sample the continuum. According to the source material, 128 is enough.
  */
-const HGLookupTexture = (root: ExperimentalTgpuRoot, samples = 128) => {
+const HGLookupTexture = (root: TgpuRoot, samples = 128) => {
   const textureData = new Uint8Array(samples * 4);
 
   const texture = root.device.createTexture({
@@ -147,7 +147,7 @@ const HGLookupTexture = (root: ExperimentalTgpuRoot, samples = 128) => {
 };
 
 type Options = {
-  root: ExperimentalTgpuRoot;
+  root: TgpuRoot;
   targetFormat: GPUTextureFormat;
   sourceTexture: () => GPUTextureView;
   targetTexture: GPUTextureView;
@@ -179,7 +179,7 @@ export const BicubicFilter = ({
     addressModeW: 'clamp-to-edge',
   });
 
-  const pipeline = root
+  const pipeline = root['~unstable']
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(resampleCubic, { format: targetFormat })
     .createPipeline()

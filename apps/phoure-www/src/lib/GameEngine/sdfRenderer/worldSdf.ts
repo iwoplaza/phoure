@@ -1,5 +1,5 @@
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
+import tgpu from 'typegpu';
 import { min } from 'typegpu/std';
 import { sphere } from '@typegpu/sdf';
 import { MarchParams, ShapeContext } from 'src/lib-ray-marching';
@@ -12,7 +12,7 @@ export const Material = d.struct({
 
 // const getTime = tgpu.accessor(d.f32);
 
-const sdfShell = tgpu.fn([d.vec3f], d.f32);
+const sdfShell = tgpu['~unstable'].fn([d.vec3f], d.f32);
 
 const objLeftBlob = sdfShell.does((pos) =>
   sphere(pos, d.vec3f(-0.3, -0.2, 0), 0.2),
@@ -33,8 +33,8 @@ const objRightBlob = sdfShell.does((pos) =>
 
 const objFloor = sdfShell.does((pos) => pos.y + 0.3);
 
-const matFloor = tgpu
-  .fn([d.vec3f, /* TODO: ptr */ Material])
+const matFloor = tgpu['~unstable']
+  .fn([d.vec3f, d.ptrFn(Material)])
   .does(/* wgsl */ `(pos: vec3f, mtr: ptr<function, Material>) {
     let uv = floor(5.0 * pos.xz);
     let c = 0.2 + 0.5 * ((uv.x + uv.y) - 2.0 * floor((uv.x + uv.y) / 2.0));
@@ -60,7 +60,7 @@ export const worldSdf = sdfShell.does((pos) => {
 
 // MATERIALS
 
-export const skyColor = tgpu
+export const skyColor = tgpu['~unstable']
   .fn([d.vec3f], d.vec3f)
   .does(/* wgsl */ `(dir: vec3f) -> vec3f {
     let t = pow(min(abs(dir.y) * 4, 1.), 0.4);
@@ -75,8 +75,8 @@ export const skyColor = tgpu
     );
   }`);
 
-export const worldMat = tgpu
-  .fn([d.vec3f, ShapeContext, /* TODO: ptr */ Material])
+export const worldMat = tgpu['~unstable']
+  .fn([d.vec3f, ShapeContext, d.ptrFn(Material)])
   .does(`(pos: vec3f, ctx: ShapeContext, out: ptr<function, Material>) {
     let sd = surfaceDist(ctx);
     let d_left_blob = objLeftBlob(pos);

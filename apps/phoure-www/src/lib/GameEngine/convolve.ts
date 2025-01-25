@@ -3,34 +3,48 @@ import {
   type U32,
   type Vec4f,
   type WgslArray,
+  type PtrFn,
+  arrayOf,
+  f32,
+  ptrFn,
   vec2u,
 } from 'typegpu/data';
-import tgpu, { type Eventual, type TgpuFn } from 'typegpu/experimental';
+import tgpu, { type Eventual, type TgpuFn } from 'typegpu';
 
 export type SampleFiller = TgpuFn<
-  [x: I32, y: I32, outSamplerPtr: /* TODO: ptr */ WgslArray<Vec4f>]
+  [x: I32, y: I32, outSamplerPtr: PtrFn<WgslArray<Vec4f>>]
 >;
 export type KernelReader = TgpuFn<[idx: U32], Vec4f>;
 
 /**
  * Has to be divisible by 4
  */
-export const inChannelsSlot = tgpu.slot<number>().$name('in_channels');
-export const outChannelsSlot = tgpu.slot<number>().$name('out_channels');
-export const kernelRadiusSlot = tgpu.slot<number>().$name('kernel_radius');
-const sampleFillerSlot = tgpu.slot<SampleFiller>().$name('sample_filler');
-const kernelReaderSlot = tgpu.slot<KernelReader>().$name('kernel_reader');
+export const inChannelsSlot = tgpu['~unstable']
+  .slot<number>()
+  .$name('in_channels');
+export const outChannelsSlot = tgpu['~unstable']
+  .slot<number>()
+  .$name('out_channels');
+export const kernelRadiusSlot = tgpu['~unstable']
+  .slot<number>()
+  .$name('kernel_radius');
+const sampleFillerSlot = tgpu['~unstable']
+  .slot<SampleFiller>()
+  .$name('sample_filler');
+const kernelReaderSlot = tgpu['~unstable']
+  .slot<KernelReader>()
+  .$name('kernel_reader');
 
-export const inChannelsQuarter = tgpu.derived(() => {
+export const inChannelsQuarter = tgpu['~unstable'].derived(() => {
   if (inChannelsSlot.value % 4 !== 0) {
     throw new Error(`'inChannels' has to be divisible by 4`);
   }
   return inChannelsSlot.value / 4;
 });
 
-const _convolveFn = tgpu.derived(() => {
-  return tgpu
-    .fn([vec2u])
+const _convolveFn = tgpu['~unstable'].derived(() => {
+  return tgpu['~unstable']
+    .fn([vec2u, ptrFn(arrayOf(f32, outChannelsSlot.value))])
     .does(/* wgsl */ `(coord: vec2u, result: ptr<function, array<f32, outChannels>>) {
       var sample = array<vec4f, inChannelsQuarter>();
 

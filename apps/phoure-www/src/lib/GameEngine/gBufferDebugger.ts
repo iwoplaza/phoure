@@ -1,9 +1,5 @@
 import * as d from 'typegpu/data';
-import tgpu, {
-  asUniform,
-  type ExperimentalTgpuRoot,
-  type TgpuFn,
-} from 'typegpu/experimental';
+import tgpu, { unstable_asUniform, type TgpuRoot, type TgpuFn } from 'typegpu';
 
 import { displayModeAtom } from 'src/lib/controlAtoms.ts';
 import { fullScreenQuadVertexFn } from 'src/lib/shaders/fullScreenQuad.ts';
@@ -15,14 +11,14 @@ const CHANNEL_COLOR = 1;
 const CHANNEL_ALBEDO = 2;
 const CHANNEL_NORMAL = 3;
 
-const getChannelModeSlot = tgpu.slot<TgpuFn<[], d.U32>>();
+const getChannelModeSlot = tgpu['~unstable'].slot<TgpuFn<[], d.U32>>();
 
 const layout = tgpu.bindGroupLayout({
   blurredTex: { texture: 'unfilterable-float' },
   auxTex: { texture: 'unfilterable-float' },
 });
 
-const mainFragFn = tgpu
+const mainFragFn = tgpu['~unstable']
   .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
   .does(/* wgsl */ `(@builtin(position) coord_f: vec4f, @location(0) uv: vec2f) -> @location(0) vec4f {
     let coord = vec2<i32>(floor(coord_f.xy));
@@ -104,7 +100,7 @@ const mainFragFn = tgpu
   });
 
 export function makeGBufferDebugger(
-  root: ExperimentalTgpuRoot,
+  root: TgpuRoot,
   presentationFormat: GPUTextureFormat,
   gBuffer: GBuffer,
 ) {
@@ -120,16 +116,16 @@ export function makeGBufferDebugger(
   const channelModeBuffer = root
     .createBuffer(d.u32, CHANNEL_SPLIT)
     .$usage('uniform');
-  const channelModeUniform = asUniform(channelModeBuffer);
+  const channelModeUniform = unstable_asUniform(channelModeBuffer);
 
-  const myGetChannelMode = tgpu
+  const myGetChannelMode = tgpu['~unstable']
     .fn([], d.u32)
     .does(`() -> u32 {
       return channelModeUniform;
     }`)
     .$uses({ channelModeUniform });
 
-  const pipeline = root
+  const pipeline = root['~unstable']
     .with(getChannelModeSlot, myGetChannelMode)
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(mainFragFn, {

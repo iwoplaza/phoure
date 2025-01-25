@@ -1,5 +1,5 @@
 import { vec3f } from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
+import tgpu from 'typegpu';
 import { mul, normalize } from 'typegpu/std';
 
 import { MarchParams } from './marchSdf';
@@ -8,7 +8,7 @@ import { ShapeContext } from './types';
 /**
  * Estimates the normal vector at a point in space, based on the SDF given by `MarchParams.sampleSdf`.
  */
-export const estimateNormal = tgpu
+export const estimateNormal = tgpu['~unstable']
   .fn([vec3f, ShapeContext], vec3f)
   .does((point, ctx) => {
     /** Arbitrary - should be smaller than any surface detail in your distance function, but not so small as to get lost in float precision */

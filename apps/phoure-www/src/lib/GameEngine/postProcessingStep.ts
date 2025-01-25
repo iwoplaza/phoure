@@ -1,11 +1,11 @@
 import * as d from 'typegpu/data';
-import tgpu, { type ExperimentalTgpuRoot } from 'typegpu/experimental';
+import tgpu, { type TgpuRoot } from 'typegpu';
 
 import type { GBuffer } from '../gBuffer';
 import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';
 
 type Options = {
-  root: ExperimentalTgpuRoot;
+  root: TgpuRoot;
   context: GPUCanvasContext;
   presentationFormat: GPUTextureFormat;
   gBuffer: GBuffer;
@@ -17,7 +17,7 @@ const layout = tgpu
   })
   .$name('Post Processing - Bind Group Layout');
 
-const mainFragFn = tgpu
+const mainFragFn = tgpu['~unstable']
   .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
   .does(`(@builtin(position) coord_f: vec4f) -> @location(0) vec4f {
     var coord = vec2u(floor(coord_f.xy));
@@ -49,7 +49,7 @@ export const PostProcessingStep = ({
     storeOp: 'store',
   };
 
-  const pipeline = root
+  const pipeline = root['~unstable']
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(mainFragFn, { format: presentationFormat })
     .createPipeline()

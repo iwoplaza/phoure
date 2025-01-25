@@ -16,10 +16,7 @@ import { accessViewportSize } from '@typegpu/common';
 import { DefaultGenerator, rand } from '@typegpu/noise';
 import { atom } from 'jotai';
 import * as d from 'typegpu/data';
-import tgpu, {
-  type ExperimentalTgpuRoot,
-  asUniform,
-} from 'typegpu/experimental';
+import tgpu, { type TgpuRoot, unstable_asUniform } from 'typegpu';
 
 import { store } from 'src/lib/store.ts';
 import type { GBuffer } from '../../gBuffer';
@@ -29,15 +26,15 @@ import { Material, skyColor, worldMat, worldSdf } from './worldSdf';
 const BlockSize = 8;
 
 // parameters
-const OutputFormat = tgpu.slot().$name('output_format');
+const OutputFormat = tgpu['~unstable'].slot().$name('output_format');
 
 const SUPER_SAMPLES = 4;
 const ONE_OVER_SUPER_SAMPLES = 1 / SUPER_SAMPLES;
 const SUB_SAMPLES = 16;
 const MAX_REFL = 3;
 
-const getRandomSeedPrimer = tgpu.accessor(d.f32);
-const getAccumulatedLayers = tgpu.accessor(d.f32);
+const getRandomSeedPrimer = tgpu['~unstable'].accessor(d.f32);
+const getAccumulatedLayers = tgpu['~unstable'].accessor(d.f32);
 
 const Reflection = d.struct({
   color: d.vec3f,
@@ -52,8 +49,8 @@ export const accumulatedLayersAtom = atom(0);
  * @param normal
  * @param mat_roughness
  */
-const reflect = tgpu
-  .fn([d.vec3f, d.vec3f, d.f32, /* TODO: ptr */ d.f32])
+const reflect = tgpu['~unstable']
+  .fn([d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)])
   .does(`(ray_dir: vec3f, normal: vec3f, mat_roughness: f32, out_roughness: ptr<function, f32>) -> vec3f {
     let slope = dot(ray_dir, normal);
     let dn2 = 2. * slope;
@@ -70,7 +67,7 @@ const reflect = tgpu
   .$uses({ randOnHemisphere: rand.onHemisphere })
   .$name('reflect');
 
-const renderSubPixel = tgpu
+const renderSubPixel = tgpu['~unstable']
   .fn([d.vec2f], d.vec3f)
   .does(/* wgsl */ `(coord: vec2f) -> vec3f {
     // doing the first march before each sub-sample, since the first march result is the same for all of them
@@ -184,7 +181,7 @@ const mainLayout = tgpu.bindGroupLayout({
   mainOutput: { storageTexture: 'rgba8unorm', access: 'writeonly' },
 });
 
-const mainComputeFn = tgpu
+const mainComputeFn = tgpu['~unstable']
   .computeFn([], { workgroupSize: [BlockSize, BlockSize] })
   .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
     setupRandomSeed(vec2f(gid.xy) * ${Math.random()} + getRandomSeedPrimer * ${Math.random()});
@@ -234,7 +231,7 @@ const auxLayout = tgpu
   })
   .$name('SDF Renderer: Aux Bind Group Layout');
 
-const auxComputeFn = tgpu
+const auxComputeFn = tgpu['~unstable']
   .computeFn([], { workgroupSize: [BlockSize, BlockSize] })
   .does(/* wgsl */ `(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let offset = vec2f(
@@ -303,7 +300,7 @@ const auxComputeFn = tgpu
   });
 
 export interface SDFRendererOptions {
-  root: ExperimentalTgpuRoot;
+  root: TgpuRoot;
   gBuffer: GBuffer;
   quarterResolution?: boolean;
 }
@@ -326,12 +323,12 @@ export function createSDFRenderer(options: SDFRendererOptions) {
     auxOutput: gBuffer.auxView,
   });
 
-  const mainPipeline = root
+  const mainPipeline = root['~unstable']
     // filling slots
     .with(OutputFormat, 'rgba8unorm')
-    .with(getRandomSeedPrimer, asUniform(randomSeedPrimerBuffer))
-    .with(getAccumulatedLayers, asUniform(layersBuffer))
-    .with(getCameraProps, asUniform(camera.cameraBuffer))
+    .with(getRandomSeedPrimer, unstable_asUniform(randomSeedPrimerBuffer))
+    .with(getAccumulatedLayers, unstable_asUniform(layersBuffer))
+    .with(getCameraProps, unstable_asUniform(camera.cameraBuffer))
     .with(accessViewportSize, d.vec2f(mainPassSize[0], mainPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---
@@ -339,10 +336,10 @@ export function createSDFRenderer(options: SDFRendererOptions) {
     .createPipeline()
     .$name(`${LABEL} - main pipeline`);
 
-  const auxPipeline = root
+  const auxPipeline = root['~unstable']
     // filling slots
     .with(OutputFormat, 'rgba16float')
-    .with(getCameraProps, asUniform(camera.cameraBuffer))
+    .with(getCameraProps, unstable_asUniform(camera.cameraBuffer))
     .with(accessViewportSize, d.vec2f(auxPassSize[0], auxPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---

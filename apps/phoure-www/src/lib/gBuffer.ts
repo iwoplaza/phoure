@@ -1,4 +1,4 @@
-import type { ExperimentalTgpuRoot } from 'typegpu/experimental';
+import type { TgpuRoot } from 'typegpu';
 
 export class GBuffer {
   private quarterATexture: GPUTexture; // used by Mender (odd frames)
@@ -20,7 +20,7 @@ export class GBuffer {
   quarterSize: [number, number];
 
   constructor(
-    root: ExperimentalTgpuRoot,
+    root: TgpuRoot,
     private _size: [number, number],
   ) {
     this.quarterSize = [_size[0] >> 2, _size[1] >> 2];

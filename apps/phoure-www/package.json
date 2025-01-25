@@ -7,7 +7,8 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
   },
   "dependencies": {
     "@astrojs/react": "^4.1.2",
@@ -27,7 +28,7 @@
     "@radix-ui/react-tooltip": "^1.1.6",
     "@typegpu/color": "workspace:*",
     "@typegpu/common": "workspace:*",
-    "@typegpu/noise": "^0.0.1",
+    "@typegpu/noise": "^0.0.2",
     "@typegpu/sdf": "workspace:*",
     "@types/react": "^18.0.2",
     "@types/react-dom": "^18.0.2",
@@ -46,7 +47,7 @@
     "tailwind-merge": "^2.5.2",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
-    "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/e87b5a34/typegpu",
+    "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu",
     "wgpu-matrix": "^3.3.0"
   },
   "devDependencies": {

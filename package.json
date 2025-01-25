@@ -8,7 +8,8 @@
     "dev": "pnpm run -r dev:build && pnpm run -r --parallel dev:watch",
     "dev:build": "pnpm run -r dev:build",
     "build": "pnpm run -r build",
-    "test": "vitest",
+    "test": "pnpm -r build && pnpm run '/^test:.*/'",
+    "test:types": "pnpm run -r test:types",
     "check": "biome check",
     "fix": "biome check --write"
   },

@@ -1,6 +1,6 @@
 import * as d from 'typegpu/data';
 import tgpu from 'typegpu';
-import { min } from 'typegpu/std';
+import { min, mul } from 'typegpu/std';
 import { sphere } from '@typegpu/sdf';
 import { MarchParams, ShapeContext } from 'src/lib-ray-marching';
 
@@ -77,48 +77,33 @@ export const skyColor = tgpu['~unstable']
 
 export const worldMat = tgpu['~unstable']
   .fn([d.vec3f, ShapeContext, d.ptrFn(Material)])
-  .does(`(pos: vec3f, ctx: ShapeContext, out: ptr<function, Material>) {
-    let sd = surfaceDist(ctx);
-    let d_left_blob = objLeftBlob(pos);
-    let d_center_blob = objCenterBlob(pos);
-    let d_right_blob = objRightBlob(pos);
-    let d_floor_blob = objFloor(pos);
+  .does((pos, ctx, out) => {
+    const sd = MarchParams.getSurfaceThreshold.value(ctx);
+    const d_left_blob = objLeftBlob(pos);
+    const d_center_blob = objCenterBlob(pos);
+    const d_right_blob = objRightBlob(pos);
+    const d_floor_blob = objFloor(pos);
 
     // defaults
-    (*out).emissive = false;
-    (*out).roughness = 1.;
+    out.emissive = false;
+    out.roughness = 1;
 
     if (d_left_blob <= sd) {
       // left blob
-      (*out).albedo = vec3f(0.2, 0.2, 1.);
-      (*out).roughness = 0.95;
-    }
-    else if (d_center_blob <= sd) {
+      out.albedo = d.vec3f(0.2, 0.2, 1);
+      out.roughness = 0.95;
+    } else if (d_center_blob <= sd) {
       // test light
-      (*out).albedo = vec3f(1., 1., 0.5) * 20.;
-      (*out).emissive = true;
-    }
-    else if (d_right_blob <= sd) {
-      (*out).albedo = vec3f(0.5, 0.5, 0.6) * 0.9;
-      (*out).roughness = 0.1;
-    }
-    else if (d_floor_blob <= sd) {
+      out.albedo = mul(20, d.vec3f(1, 1, 0.5));
+      out.emissive = true;
+    } else if (d_right_blob <= sd) {
+      out.albedo = mul(0.9, d.vec3f(0.5, 0.5, 0.6));
+      out.roughness = 0.1;
+    } else if (d_floor_blob <= sd) {
       matFloor(pos, out);
+    } else {
+      // out.albedo = vec3f(0.5, 0.5, 0.2);
+      out.albedo = skyColor(ctx.rayDir);
     }
-    else {
-      // (*out).albedo = vec3f(0.5, 0.5, 0.2);
-      (*out).albedo = skyColor(ctx.rayDir);
-    }
-  }`)
-  .$uses({
-    ShapeContext,
-    Material,
-    surfaceDist: MarchParams.getSurfaceThreshold,
-    objLeftBlob,
-    objCenterBlob,
-    objRightBlob,
-    objFloor,
-    matFloor,
-    skyColor,
   })
   .$name('world_mat');

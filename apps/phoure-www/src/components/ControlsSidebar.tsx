@@ -41,6 +41,7 @@ import {
   SidebarGroupLabel,
 } from 'src/components/ui/sidebar';
 import { Slider } from 'src/components/ui/slider';
+import { Separator } from './ui/separator';
 
 function ControlLabel(props: { htmlFor: string; children: string }) {
   return (
@@ -74,7 +75,7 @@ function SliderControl(
 
   return (
     <>
-      <div className="px-4 my-2">
+      <div className="px-4 mt-2 mb-4">
         <ControlLabel htmlFor={id}>{label}</ControlLabel>
         <div className="flex justify-self-stretch gap-2">
           <Slider
@@ -213,6 +214,7 @@ export function ControlsSidebar() {
           <DisplayModeControl />
           <TargetResolutionControl />
         </ControlGroup>
+        <Separator />
         <ControlGroup label="Time">
           <CheckboxControl
             label="Fixed timestep"
@@ -226,6 +228,7 @@ export function ControlsSidebar() {
             max={2}
           />
         </ControlGroup>
+        <Separator />
         <ControlGroup label="Camera">
           <SliderControl
             label="Up/down position"

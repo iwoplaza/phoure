@@ -16,7 +16,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "typescript": "^5.7.3",
-    "vitest": "^1.6.0"
+    "vitest": "^3.0.4"
   },
   "pnpm": {
     "onlyBuiltDependencies": ["@biomejs/biome", "esbuild", "sharp"]

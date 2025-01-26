@@ -1,7 +1,7 @@
 import { convertRgbToY } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
-import * as d from 'typegpu/data';
 import tgpu, { unstable_asUniform, type TgpuRoot } from 'typegpu';
+import * as d from 'typegpu/data';
 
 import {
   convolveFn,

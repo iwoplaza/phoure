@@ -1,5 +1,5 @@
-import { f32, vec2f, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { f32, vec2f, vec3f } from 'typegpu/data';
 import { length } from 'typegpu/std';
 
 /**

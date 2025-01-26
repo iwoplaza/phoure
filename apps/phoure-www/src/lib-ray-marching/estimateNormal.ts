@@ -1,5 +1,5 @@
-import { vec3f } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { vec3f } from 'typegpu/data';
 import { mul, normalize } from 'typegpu/std';
 
 import { MarchParams } from './marchSdf';

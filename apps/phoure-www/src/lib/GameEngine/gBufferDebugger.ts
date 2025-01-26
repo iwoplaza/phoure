@@ -1,5 +1,5 @@
-import * as d from 'typegpu/data';
 import tgpu, { unstable_asUniform, type TgpuRoot, type TgpuFn } from 'typegpu';
+import * as d from 'typegpu/data';
 
 import { displayModeAtom } from 'src/lib/controlAtoms.ts';
 import { fullScreenQuadVertexFn } from 'src/lib/shaders/fullScreenQuad.ts';

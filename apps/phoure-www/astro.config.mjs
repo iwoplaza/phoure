@@ -1,8 +1,8 @@
-// @ts-check
-import { defineConfig } from 'astro/config';
+import react from '@astrojs/react';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
-import react from '@astrojs/react';
+// @ts-check
+import { defineConfig } from 'astro/config';
 import typegpu from 'rollup-plugin-typegpu';
 
 // https://astro.build/config

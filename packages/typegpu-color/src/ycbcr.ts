@@ -1,5 +1,5 @@
-import { f32, mat3x3f, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { f32, mat3x3f, vec3f } from 'typegpu/data';
 import { dot } from 'typegpu/std';
 
 const rgbToYFactor = tgpu['~unstable'].const(

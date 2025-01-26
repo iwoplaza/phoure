@@ -1,5 +1,5 @@
-import { f32, vec2f, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { f32, vec2f, vec3f } from 'typegpu/data';
 import { abs, length, max, min, sub } from 'typegpu/std';
 
 export const box2 = tgpu['~unstable'].fn([vec2f, vec2f], f32).does((p, b) => {

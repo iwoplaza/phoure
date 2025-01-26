@@ -1,5 +1,5 @@
-import { f32 } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { f32 } from 'typegpu/data';
 import { abs, max, min } from 'typegpu/std';
 
 /**

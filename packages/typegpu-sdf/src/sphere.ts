@@ -1,5 +1,5 @@
-import { f32, vec2f, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { f32, vec2f, vec3f } from 'typegpu/data';
 import { length, sub } from 'typegpu/std';
 
 export const sphere = tgpu['~unstable']

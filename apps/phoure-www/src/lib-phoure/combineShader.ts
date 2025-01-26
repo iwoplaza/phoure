@@ -1,7 +1,7 @@
 import { rgbToYcbcrMatrix, ycbcrToRgbMatrix } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
-import * as d from 'typegpu/data';
 import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
 
 export const combinationLayout = tgpu
   .bindGroupLayout({

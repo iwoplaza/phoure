@@ -1,5 +1,5 @@
-import { f32, vec2f } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { f32, vec2f } from 'typegpu/data';
 import { abs, length, max, min } from 'typegpu/std';
 
 export const extrude = tgpu['~unstable']

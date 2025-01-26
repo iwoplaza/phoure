@@ -1,5 +1,5 @@
-import { builtin, vec2f, vec4f } from 'typegpu/data';
 import tgpu, { type TgpuRoot } from 'typegpu';
+import { builtin, vec2f, vec4f } from 'typegpu/data';
 
 const layout = tgpu
   .bindGroupLayout({

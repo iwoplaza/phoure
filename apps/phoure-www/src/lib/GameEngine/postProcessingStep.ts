@@ -1,5 +1,5 @@
-import * as d from 'typegpu/data';
 import tgpu, { type TgpuRoot } from 'typegpu';
+import * as d from 'typegpu/data';
 
 import type { GBuffer } from '../gBuffer';
 import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';

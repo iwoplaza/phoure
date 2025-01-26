@@ -1,5 +1,5 @@
-import { f32, ptrFn, struct, u32, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { f32, ptrFn, struct, u32, vec3f } from 'typegpu/data';
 import { ShapeContext } from './types';
 
 const sampleSdfShell = tgpu['~unstable'].fn([vec3f], f32);

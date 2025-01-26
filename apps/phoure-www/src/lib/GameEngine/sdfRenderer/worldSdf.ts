@@ -1,8 +1,8 @@
-import * as d from 'typegpu/data';
-import tgpu from 'typegpu';
-import { min, mul } from 'typegpu/std';
 import { sphere } from '@typegpu/sdf';
 import { MarchParams, ShapeContext } from 'src/lib-ray-marching';
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { min, mul } from 'typegpu/std';
 
 export const Material = d.struct({
   albedo: d.vec3f,

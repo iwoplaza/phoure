@@ -1,3 +1,7 @@
+import { convertRgbToY } from '@typegpu/color';
+import { accessViewportSize } from '@typegpu/common';
+import { DefaultGenerator, rand } from '@typegpu/noise';
+import { atom } from 'jotai';
 import {
   Camera,
   constructRayDir,
@@ -11,12 +15,8 @@ import {
   estimateNormal,
   march,
 } from 'src/lib-ray-marching';
-import { convertRgbToY } from '@typegpu/color';
-import { accessViewportSize } from '@typegpu/common';
-import { DefaultGenerator, rand } from '@typegpu/noise';
-import { atom } from 'jotai';
-import * as d from 'typegpu/data';
 import tgpu, { type TgpuRoot, unstable_asUniform } from 'typegpu';
+import * as d from 'typegpu/data';
 
 import { store } from 'src/lib/store.ts';
 import type { GBuffer } from '../../gBuffer';

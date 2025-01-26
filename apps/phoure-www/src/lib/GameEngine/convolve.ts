@@ -1,15 +1,15 @@
+import tgpu, { type Eventual, type TgpuFn } from 'typegpu';
 import {
   type I32,
+  type PtrFn,
   type U32,
   type Vec4f,
   type WgslArray,
-  type PtrFn,
   arrayOf,
   f32,
   ptrFn,
   vec2u,
 } from 'typegpu/data';
-import tgpu, { type Eventual, type TgpuFn } from 'typegpu';
 
 export type SampleFiller = TgpuFn<
   [x: I32, y: I32, outSamplerPtr: PtrFn<WgslArray<Vec4f>>]

@@ -78,8 +78,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/typegpu-common
       '@typegpu/noise':
-        specifier: ^0.0.2
-        version: 0.0.2(typegpu@https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu)
+        specifier: ^0.0.3
+        version: 0.0.3(typegpu@https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu)
       '@typegpu/sdf':
         specifier: workspace:*
         version: link:../../packages/typegpu-sdf
@@ -1310,9 +1310,9 @@ packages:
   '@shikijs/vscode-textmate@10.0.1':
     resolution: {integrity: sha512-fTIQwLF+Qhuws31iw7Ncl1R3HUDtGwIipiJ9iU+UsDUwMhegFcQKQHd51nZjb7CArq0MvON8rbgCGQYWHUKAdg==}
 
-  '@typegpu/noise@0.0.2':
-    resolution: {integrity: sha512-Xakr/QTBkVKKIs8zKcywAnXSt0pxbJQUL7kELFHHcW1b4i4gnA5ebu46uTjZMuxM3+d160WcEWU9gDf3o3ubYQ==}
-    version: 0.0.2
+  '@typegpu/noise@0.0.3':
+    resolution: {integrity: sha512-LHbtsMOBlWT+d2ikrFEDNpLigtLJxMXrXDnlxvYa1nbxzaiVs+oOoE70qzr/CYNdFvipirPrkcTQJR9C7G8C3g==}
+    version: 0.0.3
     peerDependencies:
       typegpu: ^0.3.2
 
@@ -4325,7 +4325,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.1': {}
 
-  '@typegpu/noise@0.0.2(typegpu@https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu)':
+  '@typegpu/noise@0.0.3(typegpu@https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu)':
     dependencies:
       typegpu: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
 

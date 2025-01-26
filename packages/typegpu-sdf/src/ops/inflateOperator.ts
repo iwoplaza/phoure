@@ -1,5 +1,5 @@
-import { f32 } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { f32 } from 'typegpu/data';
 
 /**
  * Inflates the passed in field, and makes it rounded as

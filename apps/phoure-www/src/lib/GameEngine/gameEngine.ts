@@ -1,6 +1,6 @@
+import type { SetStateAction } from 'jotai';
 import { BicubicFilter } from 'src/lib-filter';
 import { MenderStep } from 'src/lib-phoure';
-import type { SetStateAction } from 'jotai';
 import tgpu from 'typegpu';
 
 import { PerformanceManager } from 'src/lib/PerformanceManager.ts';

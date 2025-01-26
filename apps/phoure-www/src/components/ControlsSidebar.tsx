@@ -4,21 +4,6 @@ import { type WritableAtom, useAtom, useSetAtom } from 'jotai';
 import { ChevronDown } from 'lucide-react';
 import { useCallback, useId } from 'react';
 
-import { accumulatedLayersAtom } from 'src/lib/GameEngine/sdfRenderer/sdfRenderer.ts';
-import {
-  type DisplayMode,
-  DisplayModes,
-  autoRotateControlAtom,
-  autoRotateSpeedAtom,
-  cameraFovControlAtom,
-  cameraOrientationControlAtom,
-  cameraYControlAtom,
-  cameraZoomControlAtom,
-  displayModeAtom,
-  fixedTimestepAtom,
-  fixedTimestepEnabledAtom,
-  targetResolutionAtom,
-} from 'src/lib/controlAtoms.ts';
 import { Checkbox } from 'src/components/ui/checkbox';
 import {
   Collapsible,
@@ -41,6 +26,21 @@ import {
   SidebarGroupLabel,
 } from 'src/components/ui/sidebar';
 import { Slider } from 'src/components/ui/slider';
+import { accumulatedLayersAtom } from 'src/lib/GameEngine/sdfRenderer/sdfRenderer.ts';
+import {
+  type DisplayMode,
+  DisplayModes,
+  autoRotateControlAtom,
+  autoRotateSpeedAtom,
+  cameraFovControlAtom,
+  cameraOrientationControlAtom,
+  cameraYControlAtom,
+  cameraZoomControlAtom,
+  displayModeAtom,
+  fixedTimestepAtom,
+  fixedTimestepEnabledAtom,
+  targetResolutionAtom,
+} from 'src/lib/controlAtoms.ts';
 import { Separator } from './ui/separator';
 
 function ControlLabel(props: { htmlFor: string; children: string }) {

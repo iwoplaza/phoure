@@ -1,5 +1,5 @@
-import { vec2f, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { vec2f, vec3f } from 'typegpu/data';
 
 export const repeatXYZ = tgpu['~unstable']
   .fn([vec3f, vec3f], vec3f)

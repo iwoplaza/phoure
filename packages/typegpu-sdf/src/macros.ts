@@ -1,5 +1,5 @@
-import { vec3f } from 'typegpu/data';
 import tgpu from 'typegpu';
+import { vec3f } from 'typegpu/data';
 import { dot } from 'typegpu/std';
 
 export const dd = tgpu['~unstable'].fn([vec3f]).does((value) => {

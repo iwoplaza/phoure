@@ -1,6 +1,6 @@
 import { accessViewportSize } from '@typegpu/common';
-import * as d from 'typegpu/data';
 import tgpu, { type TgpuRoot, type TgpuBuffer, type Uniform } from 'typegpu';
+import * as d from 'typegpu/data';
 import { mat4, vec3 } from 'wgpu-matrix';
 
 import {

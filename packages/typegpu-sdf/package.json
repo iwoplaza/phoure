@@ -29,7 +29,7 @@
     "@rollup/plugin-typescript": "^12.1.2",
     "rollup": "^4.29.1",
     "rollup-plugin-typegpu": "^0.0.1",
-    "typegpu": "https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu"
+    "typegpu": "catalog:"
   },
   "peerDependencies": {
     "typegpu": "^0.3.0"

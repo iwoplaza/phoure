@@ -1,6 +1,7 @@
-{
-  "packages": [
-    "packages/*",
-    "apps/*"
-  ]
-}
+packages:
+  - packages/*
+  - apps/*
+
+# Define a catalog of version ranges.
+catalog:
+  typegpu: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu

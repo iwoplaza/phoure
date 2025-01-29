@@ -301,7 +301,7 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
     .withFragment(combinationEntryFn, { format: 'rgba8unorm' })
     .createPipeline();
 
-  const combinationBindGroup = combinationLayout.populate({
+  const combinationBindGroup = root.createBindGroup(combinationLayout, {
     blurredTexture: gBuffer.upscaledView,
     mendedBuffer: mendedResultBuffer,
   });

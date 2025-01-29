@@ -61,7 +61,7 @@ export const PostProcessingStep = ({
       const textureView = context.getCurrentTexture().createView();
       passColorAttachment.view = textureView;
 
-      const externalBindGroup = layout.populate({
+      const externalBindGroup = root.createBindGroup(layout, {
         sourceTexture: gBuffer.outRawRenderView,
       });
 

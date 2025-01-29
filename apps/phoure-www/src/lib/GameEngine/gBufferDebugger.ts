@@ -135,7 +135,7 @@ export function makeGBufferDebugger(
     .$name('GBuffer Debugger - pipeline')
     .with(
       layout,
-      layout.populate({
+      root.createBindGroup(layout, {
         blurredTex: gBuffer.upscaledView,
         auxTex: gBuffer.auxView,
       }),

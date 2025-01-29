@@ -197,7 +197,7 @@ export const BicubicFilter = ({
 
   return {
     perform() {
-      const externalBindGroup = layout.populate({
+      const externalBindGroup = root.createBindGroup(layout, {
         wrappingSampler,
         clampingSampler,
         texture: sourceTexture(),

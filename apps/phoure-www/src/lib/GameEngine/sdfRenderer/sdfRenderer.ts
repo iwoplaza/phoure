@@ -319,7 +319,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
 
   // ---
 
-  const auxBindGroup = auxLayout.populate({
+  const auxBindGroup = root.createBindGroup(auxLayout, {
     auxOutput: gBuffer.auxView,
   });
 
@@ -355,7 +355,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
       layersBuffer.write(store.get(accumulatedLayersAtom));
       camera.update();
 
-      const mainBindGroup = mainLayout.populate({
+      const mainBindGroup = root.createBindGroup(mainLayout, {
         previousRender: quarterResolution
           ? gBuffer.inQuarterView
           : gBuffer.inRawRenderView,

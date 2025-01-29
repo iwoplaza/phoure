@@ -61,7 +61,7 @@ export const atomWithUrl = <T>(
           ...prev,
           searchParams: searchParams,
         },
-        { replace: false },
+        { replace: true },
       );
     },
   );

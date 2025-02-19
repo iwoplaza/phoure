@@ -31,8 +31,9 @@ The dataset that was used to train the upscaling neural network was generated wi
 - [x] Train the network.
 - [x] Create ray marching renderer (for SDFs).
 - [x] Implement inference on the WebGPU.
-- [ ] Extract into a separate package, to be used as an upscaling step in other WebGPU projects.
+- [ ] Use multisampling for render passes.
 - [ ] Create rasterizing renderer (polygonal geometry).
+- [ ] Extract into a separate package, to be used as an upscaling step in other WebGPU projects.
 
 ## Development
 

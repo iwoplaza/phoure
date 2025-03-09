@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     typegpu:
-      specifier: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
-      version: 0.3.2
+      specifier: ^0.4.5
+      version: 0.4.5
 
 importers:
 
@@ -79,7 +79,7 @@ importers:
         version: link:../../packages/typegpu-common
       '@typegpu/noise':
         specifier: ^0.0.3
-        version: 0.0.3(typegpu@https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu)
+        version: 0.0.3(typegpu@0.4.5)
       '@typegpu/sdf':
         specifier: workspace:*
         version: link:../../packages/typegpu-sdf
@@ -136,7 +136,7 @@ importers:
         version: 1.0.7(tailwindcss@3.4.17)
       typegpu:
         specifier: 'catalog:'
-        version: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: 0.4.5
       wgpu-matrix:
         specifier: ^3.3.0
         version: 3.3.0
@@ -171,7 +171,7 @@ importers:
         version: 0.0.1
       typegpu:
         specifier: 'catalog:'
-        version: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: 0.4.5
 
   packages/typegpu-color:
     devDependencies:
@@ -189,7 +189,7 @@ importers:
         version: 0.0.1
       typegpu:
         specifier: 'catalog:'
-        version: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: 0.4.5
 
   packages/typegpu-common:
     devDependencies:
@@ -207,7 +207,7 @@ importers:
         version: 0.0.1
       typegpu:
         specifier: 'catalog:'
-        version: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: 0.4.5
 
   packages/typegpu-sdf:
     devDependencies:
@@ -225,7 +225,7 @@ importers:
         version: 0.0.1
       typegpu:
         specifier: 'catalog:'
-        version: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+        version: 0.4.5
 
 packages:
 
@@ -1312,7 +1312,6 @@ packages:
 
   '@typegpu/noise@0.0.3':
     resolution: {integrity: sha512-LHbtsMOBlWT+d2ikrFEDNpLigtLJxMXrXDnlxvYa1nbxzaiVs+oOoE70qzr/CYNdFvipirPrkcTQJR9C7G8C3g==}
-    version: 0.0.3
     peerDependencies:
       typegpu: ^0.3.2
 
@@ -2890,6 +2889,10 @@ packages:
     resolution: {integrity: sha512-rTi8MVYhCYxWnk1D3EORy3Dmy0k7QL6ihSK4qA74I4vkGvUkkIaqOzZatkD6fag/yMF3MJYsb1hmEZuoliizgA==}
     engines: {node: '>=12.20.0'}
 
+  tinyest@0.1.0-alpha.3:
+    resolution: {integrity: sha512-QLtpj8McYtcYT9g4dNW/b8vPsWkPdrIdqNugvyD47Y7yDx9AWEh6ZojsWDwqk3kvChCK2BYOE2MIMJabwgzEPw==}
+    engines: {node: '>=12.20.0'}
+
   tinyexec@0.3.2:
     resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
 
@@ -2938,9 +2941,8 @@ packages:
   typed-binary@4.3.2:
     resolution: {integrity: sha512-HT3pIBM2njCZUmeczDaQUUErGiM6GXFCqMsHegE12HCoBtvHCkfR10JJni0TeGOTnLilTd6YFyj+YhflqQDrDQ==}
 
-  typegpu@https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu:
-    resolution: {tarball: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu}
-    version: 0.3.2
+  typegpu@0.4.5:
+    resolution: {integrity: sha512-KYIwOGoGTdr4qPjALJSpX+4Y0LDrlOLyk2qNryLejuYH+sMVcqDHUIotL5XvD9EWNMGJzr2tzyVdRPs2tLzv+g==}
     engines: {node: '>=12.20.0'}
 
   typescript@5.7.3:
@@ -4325,9 +4327,9 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.1': {}
 
-  '@typegpu/noise@0.0.3(typegpu@https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu)':
+  '@typegpu/noise@0.0.3(typegpu@0.4.5)':
     dependencies:
-      typegpu: https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu
+      typegpu: 0.4.5
 
   '@types/acorn@4.0.6':
     dependencies:
@@ -6497,6 +6499,8 @@ snapshots:
 
   tinyest@0.1.0-alpha.1: {}
 
+  tinyest@0.1.0-alpha.3: {}
+
   tinyexec@0.3.2: {}
 
   tinypool@1.0.2: {}
@@ -6525,9 +6529,9 @@ snapshots:
 
   typed-binary@4.3.2: {}
 
-  typegpu@https://pkg.csb.dev/software-mansion/TypeGPU/commit/ee835995/typegpu:
+  typegpu@0.4.5:
     dependencies:
-      tinyest: 0.1.0-alpha.1
+      tinyest: 0.1.0-alpha.3
       typed-binary: 4.3.2
 
   typescript@5.7.3: {}

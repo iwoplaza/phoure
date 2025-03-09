@@ -6,16 +6,19 @@ import * as d from 'typegpu/data';
 export const combinationLayout = tgpu
   .bindGroupLayout({
     blurredTexture: { texture: 'float' },
-    mendedBuffer: { storage: (n) => d.arrayOf(d.f32, n) },
+    mendedBuffer: { storage: (n: number) => d.arrayOf(d.f32, n) },
   })
   .$name('combinationLayout');
 
 const { blurredTexture, mendedBuffer } = combinationLayout.bound;
 
 export const combinationEntryFn = tgpu['~unstable']
-  .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
-  .does(/* wgsl */ `(@builtin(position) coord_f: vec4f) -> @location(0) vec4f {
-    let coord = vec2u(floor(coord_f.xy));
+  .fragmentFn({
+    in: { coord_f: d.builtin.position, uv: d.vec2f },
+    out: d.vec4f,
+  })
+  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
+    let coord = vec2u(floor(input.coord_f.xy));
 
     let blurred = textureLoad(
       blurredTexture,

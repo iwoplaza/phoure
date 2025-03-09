@@ -10,9 +10,9 @@ type Options = {
 };
 
 const fragFn = tgpu['~unstable']
-  .fragmentFn({ coordFloat: d.builtin.position }, d.vec4f)
-  .does(`(@builtin(position) coordFloat: vec4f) -> @location(0) vec4f {
-    var coord = vec2u(floor(coordFloat.xy));
+  .fragmentFn({ in: { coordFloat: d.builtin.position }, out: d.vec4f })
+  .does(`(input: FragmentInput) -> @location(0) vec4f {
+    var coord = vec2u(floor(input.coordFloat.xy));
 
     let color_a = textureLoad(
       texture_a,
@@ -27,8 +27,7 @@ const fragFn = tgpu['~unstable']
     );
 
     return vec4f(abs(color_a.rgb - color_b.rgb), 1.0);
-  }`)
-  .$uses({});
+  }`);
 
 export const BlipDifferenceStep = ({
   root,

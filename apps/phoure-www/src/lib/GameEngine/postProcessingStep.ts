@@ -18,9 +18,12 @@ const layout = tgpu
   .$name('Post Processing - Bind Group Layout');
 
 const mainFragFn = tgpu['~unstable']
-  .fragmentFn({ pos: d.builtin.position, uv: d.vec2f }, d.vec4f)
-  .does(`(@builtin(position) coord_f: vec4f) -> @location(0) vec4f {
-    var coord = vec2u(floor(coord_f.xy));
+  .fragmentFn({
+    in: { coord_f: d.builtin.position, uv: d.vec2f },
+    out: d.vec4f,
+  })
+  .does(`(input: FragmentInput) -> @location(0) vec4f {
+    var coord = vec2u(floor(input.coord_f.xy));
 
     let color = textureLoad(
       sourceTexture,

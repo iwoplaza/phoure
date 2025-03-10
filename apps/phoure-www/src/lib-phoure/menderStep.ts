@@ -1,6 +1,6 @@
 import { convertRgbToY } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
-import tgpu, { unstable_asUniform, type TgpuRoot } from 'typegpu';
+import tgpu, { type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 
 import {
@@ -55,8 +55,11 @@ const BLOCK_SIZE = 8;
 // }`;
 
 const ioLayout = tgpu.bindGroupLayout({
-  output_buffer: { storage: (n) => d.arrayOf(d.f32, n), access: 'mutable' },
-  input_buffer: { storage: (n) => d.arrayOf(d.vec4f, n) },
+  output_buffer: {
+    storage: (n: number) => d.arrayOf(d.f32, n),
+    access: 'mutable',
+  },
+  input_buffer: { storage: (n: number) => d.arrayOf(d.vec4f, n) },
   blurred_tex: { texture: 'unfilterable-float' },
   aux_tex: { texture: 'unfilterable-float' },
 });
@@ -147,14 +150,19 @@ const menderConvolveFn = convolveFn({
 });
 
 const entryComputeFn = tgpu['~unstable']
-  .computeFn([], { workgroupSize: [BLOCK_SIZE, BLOCK_SIZE] })
-  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
+  .computeFn({
+    workgroupSize: [BLOCK_SIZE, BLOCK_SIZE],
+    in: {
+      gid: d.builtin.globalInvocationId,
+    },
+  })
+  .does(/* wgsl */ `(input: Input) {
     var result: array<f32, OUT_CHANNELS>;
     for (var i = 0; i < OUT_CHANNELS; i += 1) {
       result[i] = biases[i];
     }
 
-    menderConvolveFn(gid.xy, &result);
+    menderConvolveFn(input.gid.xy, &result);
   
     if (reluSlot) {
       applyReLU(&result);
@@ -163,8 +171,8 @@ const entryComputeFn = tgpu['~unstable']
     let canvasSize = accessViewportSize;
   
     let output_buffer_begin =
-      (gid.y * u32(canvasSize.x) +
-      gid.x) * OUT_CHANNELS;
+      (input.gid.y * u32(canvasSize.x) +
+      input.gid.x) * OUT_CHANNELS;
   
     for (var i: u32 = 0; i < OUT_CHANNELS; i++) {
       output_buffer[output_buffer_begin + i] = result[i];
@@ -232,7 +240,7 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
         .with(outChannelsSlot, options.outChannels)
         .with(reluSlot, options.relu)
         .with(inputFromGBufferSlot, options.inputFromGBuffer)
-        .with(accessViewportSize, unstable_asUniform(viewportSizeBuffer))
+        .with(accessViewportSize, viewportSizeBuffer.as('uniform'))
         // ---
         .withCompute(entryComputeFn)
         .createPipeline()
@@ -296,7 +304,7 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
   // ---
 
   const combinationPipeline = root['~unstable']
-    .with(accessViewportSize, unstable_asUniform(viewportSizeBuffer))
+    .with(accessViewportSize, viewportSizeBuffer.as('uniform'))
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(combinationEntryFn, { format: 'rgba8unorm' })
     .createPipeline();

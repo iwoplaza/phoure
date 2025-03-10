@@ -182,12 +182,15 @@ const mainLayout = tgpu.bindGroupLayout({
 });
 
 const mainComputeFn = tgpu['~unstable']
-  .computeFn([], { workgroupSize: [BlockSize, BlockSize] })
-  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    setupRandomSeed(vec2f(gid.xy) * ${Math.random()} + getRandomSeedPrimer * ${Math.random()});
+  .computeFn({
+    workgroupSize: [BlockSize, BlockSize],
+    in: { gid: d.builtin.globalInvocationId },
+  })
+  .does(/* wgsl */ `(input: Input) {
+    setupRandomSeed(vec2f(input.gid.xy) * ${Math.random()} + getRandomSeedPrimer * ${Math.random()});
 
     let prev_layers = getAccumulatedLayers;
-    let prev_render = textureLoad(previousRender, gid.xy, 0);
+    let prev_render = textureLoad(previousRender, input.gid.xy, 0);
   
     var acc = vec3f(0., 0., 0.);
     for (var sx = 0u; sx < SUPER_SAMPLES; sx++) {
@@ -197,7 +200,7 @@ const mainComputeFn = tgpu['~unstable']
           (f32(sy) + 0.5) * ONE_OVER_SUPER_SAMPLES,
         );
   
-        acc += renderSubPixel(vec2f(gid.xy) + offset);
+        acc += renderSubPixel(vec2f(input.gid.xy) + offset);
       }
     }
   
@@ -212,7 +215,7 @@ const mainComputeFn = tgpu['~unstable']
       new_render = (prev_render * prev_layers + vec4(acc, 1.0)) / (prev_layers + 1);
     }
   
-    textureStore(mainOutput, gid.xy, new_render);
+    textureStore(mainOutput, input.gid.xy, new_render);
   }`)
   .$uses({
     SUPER_SAMPLES,
@@ -232,8 +235,11 @@ const auxLayout = tgpu
   .$name('SDF Renderer: Aux Bind Group Layout');
 
 const auxComputeFn = tgpu['~unstable']
-  .computeFn([], { workgroupSize: [BlockSize, BlockSize] })
-  .does(/* wgsl */ `(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
+  .computeFn({
+    workgroupSize: [BlockSize, BlockSize],
+    in: { gid: d.builtin.globalInvocationId },
+  })
+  .does(/* wgsl */ `(input: Input) {
     let offset = vec2f(
       0.5,
       0.5,
@@ -243,7 +249,7 @@ const auxComputeFn = tgpu['~unstable']
     var shape_ctx: ShapeContext;
     shape_ctx.rayPos = constructRayPos();
     shape_ctx.rayDir = constructRayDir(
-      vec2f(GlobalInvocationID.xy) + offset
+      vec2f(input.gid.xy) + offset
     );
     shape_ctx.rayDistance = 0.;
   
@@ -282,7 +288,7 @@ const auxComputeFn = tgpu['~unstable']
   
     // TODO: maybe apply gamma correction to the albedo luminance parameter??
   
-    textureStore(auxOutput, GlobalInvocationID.xy, aux);
+    textureStore(auxOutput, input.gid.xy, aux);
   }`)
   .$uses({
     MAX_STEPS: MarchParams.maxSteps,

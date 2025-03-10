@@ -12,17 +12,17 @@ const layout = tgpu
   .$name('Resample - external bind group layout');
 
 const fullScreenQuadVertexFn = tgpu['~unstable']
-  .vertexFn(
-    { idx: builtin.vertexIndex },
-    {
+  .vertexFn({
+    in: { idx: builtin.vertexIndex },
+    out: {
       pos: builtin.position,
       uv: vec2f,
       texelSizeX: vec2f,
       texelSizeY: vec2f,
       coordHG: vec2f,
     },
-  )
-  .does(/* wgsl */ `(@builtin(vertex_index) idx: u32) -> VertexOutput {
+  })
+  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
     const SCREEN_RECT = array<vec2f, 6>(
       vec2f(-1.0, -1.0),
       vec2f(1.0, -1.0),
@@ -46,13 +46,13 @@ const fullScreenQuadVertexFn = tgpu['~unstable']
     let viewport_size = vec2f(textureDimensions(texture));
 
     var output: VertexOutput;
-    output.pos = vec4f(SCREEN_RECT[idx], 0.0, 1.0);
-    output.uv = UVS[idx];
+    output.pos = vec4f(SCREEN_RECT[input.idx], 0.0, 1.0);
+    output.uv = UVS[input.idx];
     output.texelSizeX = vec2f(1. / f32(viewport_size.x), 0);
     output.texelSizeY = vec2f(0, 1. / f32(viewport_size.y));
 
     // calc filter texture coordinates where [0,1] is a single texel
-    output.coordHG = UVS[idx] * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
+    output.coordHG = UVS[input.idx] * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
 
     return output;
   }`)
@@ -63,25 +63,25 @@ const fullScreenQuadVertexFn = tgpu['~unstable']
  * https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-20-fast-third-order-texture-filtering
  */
 const resampleCubic = tgpu['~unstable']
-  .fragmentFn(
-    {
+  .fragmentFn({
+    in: {
       pos: builtin.position,
       uv: vec2f,
       texelSizeX: vec2f,
       texelSizeY: vec2f,
       coordHG: vec2f,
     },
-    vec4f,
-  )
-  .does(/* wgsl */ `(@location(0) uv: vec2f, @location(1) texelSizeX: vec2f, @location(2) texelSizeY: vec2f, @location(3) coord_hg: vec2f) -> @location(0) vec4f {
-    var hg_x = textureSample(hgLookup, wrappingSampler, coord_hg.x).xyz;
-    var hg_y = textureSample(hgLookup, wrappingSampler, coord_hg.y).xyz;      // determine linear sampling coordinates
-    var coord_source10 = uv + hg_x.x * texelSizeX;
-    var coord_source00 = uv - hg_x.y * texelSizeX;
-    var coord_source11 = coord_source10 + hg_y.x * texelSizeY;
-    var coord_source01 = coord_source00 + hg_y.x * texelSizeY;
-    coord_source10 = coord_source10 - hg_y.y * texelSizeY;
-    coord_source00 = coord_source00 - hg_y.y * texelSizeY;      // fetch four linearly interpolated inputs
+    out: vec4f,
+  })
+  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
+    var hg_x = textureSample(hgLookup, wrappingSampler, input.coordHG.x).xyz;
+    var hg_y = textureSample(hgLookup, wrappingSampler, input.coordHG.y).xyz;      // determine linear sampling coordinates
+    var coord_source10 = input.uv + hg_x.x * input.texelSizeX;
+    var coord_source00 = input.uv - hg_x.y * input.texelSizeX;
+    var coord_source11 = coord_source10 + hg_y.x * input.texelSizeY;
+    var coord_source01 = coord_source00 + hg_y.x * input.texelSizeY;
+    coord_source10 = coord_source10 - hg_y.y * input.texelSizeY;
+    coord_source00 = coord_source00 - hg_y.y * input.texelSizeY;      // fetch four linearly interpolated inputs
     var tex_source00 = textureSample(texture, clampingSampler, coord_source00);
     var tex_source10 = textureSample(texture, clampingSampler, coord_source10);
     var tex_source01 = textureSample(texture, clampingSampler, coord_source01);

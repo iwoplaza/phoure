@@ -3,7 +3,7 @@ import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 // @ts-check
 import { defineConfig } from 'astro/config';
-import typegpu from 'rollup-plugin-typegpu';
+import typegpu from 'unplugin-typegpu/vite';
 
 // https://astro.build/config
 export default defineConfig({

@@ -90,7 +90,7 @@ export const worldMat = tgpu['~unstable']
 
     if (d_left_blob <= sd) {
       // left blob
-      out.albedo = d.vec3f(0.2, 0.2, 1);
+      out.albedo = d.vec3f(1, 0.5, 0.2);
       out.roughness = 0.95;
     } else if (d_center_blob <= sd) {
       // test light

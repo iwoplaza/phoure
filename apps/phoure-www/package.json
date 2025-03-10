@@ -42,12 +42,12 @@
     "phoure": "workspace:*",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
-    "rollup-plugin-typegpu": "^0.0.1",
     "sharp": "^0.33.5",
     "tailwind-merge": "^2.5.2",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
     "typegpu": "catalog:",
+    "unplugin-typegpu": "catalog:",
     "wgpu-matrix": "^3.3.0"
   },
   "devDependencies": {

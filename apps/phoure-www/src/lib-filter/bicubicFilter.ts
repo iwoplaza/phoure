@@ -74,8 +74,8 @@ const resampleCubic = tgpu['~unstable']
     out: vec4f,
   })
   .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
-    var hg_x = textureSample(hgLookup, wrappingSampler, input.coord_hg.x).xyz;
-    var hg_y = textureSample(hgLookup, wrappingSampler, input.coord_hg.y).xyz;      // determine linear sampling coordinates
+    var hg_x = textureSample(hgLookup, wrappingSampler, input.coordHG.x).xyz;
+    var hg_y = textureSample(hgLookup, wrappingSampler, input.coordHG.y).xyz;      // determine linear sampling coordinates
     var coord_source10 = input.uv + hg_x.x * input.texelSizeX;
     var coord_source00 = input.uv - hg_x.y * input.texelSizeX;
     var coord_source11 = coord_source10 + hg_y.x * input.texelSizeY;

@@ -16,9 +16,8 @@ export const combinationEntryFn = tgpu['~unstable']
   .fragmentFn({
     in: { coord_f: d.builtin.position, uv: d.vec2f },
     out: d.vec4f,
-  })
-  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
-    let coord = vec2u(floor(input.coord_f.xy));
+  })(/* wgsl */ `{
+    let coord = vec2u(floor(in.coord_f.xy));
 
     let blurred = textureLoad(
       blurredTexture,

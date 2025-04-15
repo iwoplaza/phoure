@@ -21,9 +21,8 @@ const mainFragFn = tgpu['~unstable']
   .fragmentFn({
     in: { coord_f: d.builtin.position, uv: d.vec2f },
     out: d.vec4f,
-  })
-  .does(`(input: FragmentInput) -> @location(0) vec4f {
-    var coord = vec2u(floor(input.coord_f.xy));
+  })(`{
+    var coord = vec2u(floor(in.coord_f.xy));
 
     let color = textureLoad(
       sourceTexture,

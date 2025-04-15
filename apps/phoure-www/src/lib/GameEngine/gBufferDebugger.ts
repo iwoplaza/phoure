@@ -22,9 +22,8 @@ const mainFragFn = tgpu['~unstable']
   .fragmentFn({
     in: { coord_f: d.builtin.position, uv: d.vec2f },
     out: d.vec4f,
-  })
-  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
-    let coord = vec2<i32>(floor(input.coord_f.xy));
+  })(/* wgsl */ `{
+    let coord = vec2<i32>(floor(in.coord_f.xy));
     let channel_mode = getChannelModeSlot();
 
     let blurred = textureLoad(
@@ -48,7 +47,7 @@ const mainFragFn = tgpu['~unstable']
 
     var result: vec4<f32>;
 
-    let c = input.uv;
+    let c = in.uv;
     if (channel_mode == CHANNEL_SPLIT) {
       if (c.x < 0.33) {
         // NORMALS

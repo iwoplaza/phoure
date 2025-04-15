@@ -155,14 +155,14 @@ const entryComputeFn = tgpu['~unstable']
     in: {
       gid: d.builtin.globalInvocationId,
     },
-  })
-  .does(/* wgsl */ `(input: Input) {
+  })(/* wgsl */ `{
     var result: array<f32, OUT_CHANNELS>;
+    
     for (var i = 0; i < OUT_CHANNELS; i += 1) {
       result[i] = biases[i];
     }
 
-    menderConvolveFn(input.gid.xy, &result);
+    menderConvolveFn(in.gid.xy, &result);
   
     if (reluSlot) {
       applyReLU(&result);
@@ -171,8 +171,8 @@ const entryComputeFn = tgpu['~unstable']
     let canvasSize = accessViewportSize;
   
     let output_buffer_begin =
-      (input.gid.y * u32(canvasSize.x) +
-      input.gid.x) * OUT_CHANNELS;
+      (in.gid.y * u32(canvasSize.x) +
+      in.gid.x) * OUT_CHANNELS;
   
     for (var i: u32 = 0; i < OUT_CHANNELS; i++) {
       output_buffer[output_buffer_begin + i] = result[i];

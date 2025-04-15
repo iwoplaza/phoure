@@ -1,6 +1,6 @@
 import { convertRgbToY } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
-import { DefaultGenerator, rand } from '@typegpu/noise';
+import { randf } from '@typegpu/noise';
 import { atom } from 'jotai';
 import {
   Camera,
@@ -50,8 +50,12 @@ export const accumulatedLayersAtom = atom(0);
  * @param mat_roughness
  */
 const reflect = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)])
-  .does(`(ray_dir: vec3f, normal: vec3f, mat_roughness: f32, out_roughness: ptr<function, f32>) -> vec3f {
+  .fn([
+    d.vec3f,
+    d.vec3f,
+    d.f32,
+    d.ptrFn(d.f32),
+  ])(`(ray_dir: vec3f, normal: vec3f, mat_roughness: f32, out_roughness: ptr<function, f32>) -> vec3f {
     let slope = dot(ray_dir, normal);
     let dn2 = 2. * slope;
     let refl_dir = ray_dir - dn2 * normal;
@@ -64,7 +68,7 @@ const reflect = tgpu['~unstable']
     new_ray_dir = mix(refl_dir, new_ray_dir, roughness);
     return normalize(new_ray_dir);
   }`)
-  .$uses({ randOnHemisphere: rand.onHemisphere })
+  .$uses({ randOnHemisphere: randf.onHemisphere })
   .$name('reflect');
 
 const renderSubPixel = tgpu['~unstable']
@@ -185,12 +189,11 @@ const mainComputeFn = tgpu['~unstable']
   .computeFn({
     workgroupSize: [BlockSize, BlockSize],
     in: { gid: d.builtin.globalInvocationId },
-  })
-  .does(/* wgsl */ `(input: Input) {
-    setupRandomSeed(vec2f(input.gid.xy) * ${Math.random()} + getRandomSeedPrimer * ${Math.random()});
+  })(/* wgsl */ `{
+    setupRandomSeed(vec2f(in.gid.xy) * ${Math.random()} + getRandomSeedPrimer * ${Math.random()});
 
     let prev_layers = getAccumulatedLayers;
-    let prev_render = textureLoad(previousRender, input.gid.xy, 0);
+    let prev_render = textureLoad(previousRender, in.gid.xy, 0);
   
     var acc = vec3f(0., 0., 0.);
     for (var sx = 0u; sx < SUPER_SAMPLES; sx++) {
@@ -200,7 +203,7 @@ const mainComputeFn = tgpu['~unstable']
           (f32(sy) + 0.5) * ONE_OVER_SUPER_SAMPLES,
         );
   
-        acc += renderSubPixel(vec2f(input.gid.xy) + offset);
+        acc += renderSubPixel(vec2f(in.gid.xy) + offset);
       }
     }
   
@@ -215,14 +218,14 @@ const mainComputeFn = tgpu['~unstable']
       new_render = (prev_render * prev_layers + vec4(acc, 1.0)) / (prev_layers + 1);
     }
   
-    textureStore(mainOutput, input.gid.xy, new_render);
+    textureStore(mainOutput, in.gid.xy, new_render);
   }`)
   .$uses({
     SUPER_SAMPLES,
     ONE_OVER_SUPER_SAMPLES,
     previousRender: mainLayout.bound.previousRender,
     mainOutput: mainLayout.bound.mainOutput,
-    setupRandomSeed: DefaultGenerator.seed,
+    setupRandomSeed: randf.seed2,
     renderSubPixel,
     getRandomSeedPrimer,
     getAccumulatedLayers,
@@ -238,8 +241,7 @@ const auxComputeFn = tgpu['~unstable']
   .computeFn({
     workgroupSize: [BlockSize, BlockSize],
     in: { gid: d.builtin.globalInvocationId },
-  })
-  .does(/* wgsl */ `(input: Input) {
+  })(/* wgsl */ `{
     let offset = vec2f(
       0.5,
       0.5,
@@ -249,7 +251,7 @@ const auxComputeFn = tgpu['~unstable']
     var shape_ctx: ShapeContext;
     shape_ctx.rayPos = constructRayPos();
     shape_ctx.rayDir = constructRayDir(
-      vec2f(input.gid.xy) + offset
+      vec2f(in.gid.xy) + offset
     );
     shape_ctx.rayDistance = 0.;
   
@@ -288,7 +290,7 @@ const auxComputeFn = tgpu['~unstable']
   
     // TODO: maybe apply gamma correction to the albedo luminance parameter??
   
-    textureStore(auxOutput, input.gid.xy, aux);
+    textureStore(auxOutput, in.gid.xy, aux);
   }`)
   .$uses({
     MAX_STEPS: MarchParams.maxSteps,

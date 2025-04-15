@@ -21,8 +21,7 @@ const fullScreenQuadVertexFn = tgpu['~unstable']
       texelSizeY: vec2f,
       coordHG: vec2f,
     },
-  })
-  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+  })(/* wgsl */ `{
     const SCREEN_RECT = array<vec2f, 6>(
       vec2f(-1.0, -1.0),
       vec2f(1.0, -1.0),
@@ -45,14 +44,14 @@ const fullScreenQuadVertexFn = tgpu['~unstable']
 
     let viewport_size = vec2f(textureDimensions(texture));
 
-    var output: VertexOutput;
-    output.pos = vec4f(SCREEN_RECT[input.idx], 0.0, 1.0);
-    output.uv = UVS[input.idx];
+    var output: Out;
+    output.pos = vec4f(SCREEN_RECT[in.idx], 0.0, 1.0);
+    output.uv = UVS[in.idx];
     output.texelSizeX = vec2f(1. / f32(viewport_size.x), 0);
     output.texelSizeY = vec2f(0, 1. / f32(viewport_size.y));
 
     // calc filter texture coordinates where [0,1] is a single texel
-    output.coordHG = UVS[input.idx] * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
+    output.coordHG = UVS[in.idx] * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
 
     return output;
   }`)
@@ -72,16 +71,15 @@ const resampleCubic = tgpu['~unstable']
       coordHG: vec2f,
     },
     out: vec4f,
-  })
-  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
-    var hg_x = textureSample(hgLookup, wrappingSampler, input.coordHG.x).xyz;
-    var hg_y = textureSample(hgLookup, wrappingSampler, input.coordHG.y).xyz;      // determine linear sampling coordinates
-    var coord_source10 = input.uv + hg_x.x * input.texelSizeX;
-    var coord_source00 = input.uv - hg_x.y * input.texelSizeX;
-    var coord_source11 = coord_source10 + hg_y.x * input.texelSizeY;
-    var coord_source01 = coord_source00 + hg_y.x * input.texelSizeY;
-    coord_source10 = coord_source10 - hg_y.y * input.texelSizeY;
-    coord_source00 = coord_source00 - hg_y.y * input.texelSizeY;      // fetch four linearly interpolated inputs
+  })(/* wgsl */ `{
+    var hg_x = textureSample(hgLookup, wrappingSampler, in.coordHG.x).xyz;
+    var hg_y = textureSample(hgLookup, wrappingSampler, in.coordHG.y).xyz;      // determine linear sampling coordinates
+    var coord_source10 = in.uv + hg_x.x * in.texelSizeX;
+    var coord_source00 = in.uv - hg_x.y * in.texelSizeX;
+    var coord_source11 = coord_source10 + hg_y.x * in.texelSizeY;
+    var coord_source01 = coord_source00 + hg_y.x * in.texelSizeY;
+    coord_source10 = coord_source10 - hg_y.y * in.texelSizeY;
+    coord_source00 = coord_source00 - hg_y.y * in.texelSizeY;      // fetch four linearly interpolated inputs
     var tex_source00 = textureSample(texture, clampingSampler, coord_source00);
     var tex_source10 = textureSample(texture, clampingSampler, coord_source10);
     var tex_source01 = textureSample(texture, clampingSampler, coord_source01);

@@ -1,7 +1,7 @@
+// @ts-check
 import react from '@astrojs/react';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
-// @ts-check
 import { defineConfig } from 'astro/config';
 import typegpu from 'unplugin-typegpu/vite';
 
@@ -20,9 +20,13 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'phoure',
-      social: {
-        github: 'https://github.com/iwoplaza/phoure',
-      },
+      social: [
+        {
+          icon: 'github',
+          href: 'https://github.com/iwoplaza/phoure',
+          label: 'GitHub',
+        },
+      ],
       customCss: ['./src/tailwind.css'],
       sidebar: [
         {

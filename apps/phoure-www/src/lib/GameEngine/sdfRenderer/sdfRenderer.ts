@@ -15,13 +15,13 @@ import {
   estimateNormal,
   march,
 } from 'src/lib-ray-marching';
-import tgpu, { type TgpuRoot, unstable_asUniform } from 'typegpu';
+import tgpu, { type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 
 import { store } from 'src/lib/store.ts';
-import type { GBuffer } from '../../gBuffer';
-import { ONES_3F } from '../wgslUtils/mathConstants';
-import { Material, skyColor, worldMat, worldSdf } from './worldSdf';
+import type { GBuffer } from '../../gBuffer.ts';
+import { ONES_3F } from '../wgslUtils/mathConstants.ts';
+import { Material, skyColor, worldMat, worldSdf } from './worldSdf.ts';
 
 const BlockSize = 8;
 
@@ -50,30 +50,35 @@ export const accumulatedLayersAtom = atom(0);
  * @param mat_roughness
  */
 const reflect = tgpu['~unstable']
-  .fn([
+  .fn(
+    {
+      rayDir: d.vec3f,
+      normal: d.vec3f,
+      matRoughness: d.f32,
+      outRoughness: d.ptrFn(d.f32),
+    },
     d.vec3f,
-    d.vec3f,
-    d.f32,
-    d.ptrFn(d.f32),
-  ])(`(ray_dir: vec3f, normal: vec3f, mat_roughness: f32, out_roughness: ptr<function, f32>) -> vec3f {
-    let slope = dot(ray_dir, normal);
+  )(`{
+    let slope = dot(rayDir, normal);
     let dn2 = 2. * slope;
-    let refl_dir = ray_dir - dn2 * normal;
+    let refl_dir = rayDir - dn2 * normal;
 
     let fresnel = 1. - pow(1. + slope, 16.);
-    let roughness = mat_roughness * fresnel;
-    *out_roughness = roughness;
+    let roughness = matRoughness * fresnel;
+    *outRoughness = roughness;
 
-    var new_ray_dir = randOnHemisphere(normal);
+    var new_ray_dir = randf.onHemisphere(normal);
     new_ray_dir = mix(refl_dir, new_ray_dir, roughness);
     return normalize(new_ray_dir);
   }`)
-  .$uses({ randOnHemisphere: randf.onHemisphere })
+  .$uses({ randf })
   .$name('reflect');
 
 const renderSubPixel = tgpu['~unstable']
-  .fn([d.vec2f], d.vec3f)
-  .does(/* wgsl */ `(coord: vec2f) -> vec3f {
+  .fn(
+    [d.vec2f],
+    d.vec3f,
+  )(/* wgsl */ `(coord: vec2f) -> vec3f {
     // doing the first march before each sub-sample, since the first march result is the same for all of them
 
     var init_shape_ctx: ShapeContext;
@@ -334,9 +339,9 @@ export function createSDFRenderer(options: SDFRendererOptions) {
   const mainPipeline = root['~unstable']
     // filling slots
     .with(OutputFormat, 'rgba8unorm')
-    .with(getRandomSeedPrimer, unstable_asUniform(randomSeedPrimerBuffer))
-    .with(getAccumulatedLayers, unstable_asUniform(layersBuffer))
-    .with(getCameraProps, unstable_asUniform(camera.cameraBuffer))
+    .with(getRandomSeedPrimer, randomSeedPrimerBuffer.as('uniform'))
+    .with(getAccumulatedLayers, layersBuffer.as('uniform'))
+    .with(getCameraProps, camera.cameraBuffer.as('uniform'))
     .with(accessViewportSize, d.vec2f(mainPassSize[0], mainPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---
@@ -347,7 +352,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
   const auxPipeline = root['~unstable']
     // filling slots
     .with(OutputFormat, 'rgba16float')
-    .with(getCameraProps, unstable_asUniform(camera.cameraBuffer))
+    .with(getCameraProps, camera.cameraBuffer.as('uniform'))
     .with(accessViewportSize, d.vec2f(auxPassSize[0], auxPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---

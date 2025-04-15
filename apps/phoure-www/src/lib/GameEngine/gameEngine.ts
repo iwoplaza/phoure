@@ -140,7 +140,6 @@ export const GameEngine = (
       // -- Rendering the whole scene & aux.
       if (displayMode === 'traditional') {
         traditionalSdfRenderer.perform();
-        root['~unstable'].flush();
       }
 
       if (
@@ -151,7 +150,6 @@ export const GameEngine = (
         displayMode === 'upscaled'
       ) {
         sdfRenderer.perform();
-        root['~unstable'].flush();
       }
 
       // -- Upscaling the quarter-resolution render.
@@ -173,7 +171,6 @@ export const GameEngine = (
         postProcessing.perform();
       }
 
-      root['~unstable'].flush();
       gBuffer.flip();
       if (store.get(autoRotateControlAtom)) {
         store.set(accumulatedLayersAtom, 0 as SetStateAction<number>);

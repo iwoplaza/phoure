@@ -1,7 +1,7 @@
 import tgpu, { type Eventual, type TgpuFn } from 'typegpu';
 import {
   type I32,
-  type PtrFn,
+  type Ptr,
   type U32,
   type Vec4f,
   type WgslArray,
@@ -12,7 +12,7 @@ import {
 } from 'typegpu/data';
 
 export type SampleFiller = TgpuFn<
-  [x: I32, y: I32, outSamplerPtr: PtrFn<WgslArray<Vec4f>>]
+  [x: I32, y: I32, outSamplerPtr: Ptr<'function', WgslArray<Vec4f>>]
 >;
 export type KernelReader = TgpuFn<[idx: U32], Vec4f>;
 
@@ -44,8 +44,10 @@ export const inChannelsQuarter = tgpu['~unstable'].derived(() => {
 
 const _convolveFn = tgpu['~unstable'].derived(() => {
   return tgpu['~unstable']
-    .fn([vec2u, ptrFn(arrayOf(f32, outChannelsSlot.value))])
-    .does(/* wgsl */ `(coord: vec2u, result: ptr<function, array<f32, outChannels>>) {
+    .fn([
+      vec2u,
+      ptrFn(arrayOf(f32, outChannelsSlot.value)),
+    ])(/* wgsl */ `(coord: vec2u, result: ptr<function, array<f32, outChannels>>) {
       var sample = array<vec4f, inChannelsQuarter>();
 
       var coord_idx: u32 = 0;

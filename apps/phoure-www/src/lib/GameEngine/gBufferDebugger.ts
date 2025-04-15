@@ -1,10 +1,10 @@
-import tgpu, { unstable_asUniform, type TgpuRoot, type TgpuFn } from 'typegpu';
+import tgpu, { type TgpuRoot, type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
 
 import { displayModeAtom } from 'src/lib/controlAtoms.ts';
 import { fullScreenQuadVertexFn } from 'src/lib/shaders/fullScreenQuad.ts';
 import { store } from 'src/lib/store.ts';
-import type { GBuffer } from '../gBuffer';
+import type { GBuffer } from '../gBuffer.ts';
 
 const CHANNEL_SPLIT = 0;
 const CHANNEL_COLOR = 1;
@@ -118,11 +118,13 @@ export function makeGBufferDebugger(
   const channelModeBuffer = root
     .createBuffer(d.u32, CHANNEL_SPLIT)
     .$usage('uniform');
-  const channelModeUniform = unstable_asUniform(channelModeBuffer);
+  const channelModeUniform = channelModeBuffer.as('uniform');
 
   const myGetChannelMode = tgpu['~unstable']
-    .fn([], d.u32)
-    .does(`() -> u32 {
+    .fn(
+      [],
+      d.u32,
+    )(`() -> u32 {
       return channelModeUniform;
     }`)
     .$uses({ channelModeUniform });

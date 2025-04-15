@@ -68,8 +68,11 @@ const { weights, biases } = layerLayout.bound;
 
 const sampleGlobal = tgpu['~unstable'].derived(() => {
   return tgpu['~unstable']
-    .fn([d.i32, d.i32, d.ptrFn(d.arrayOf(d.vec4f, inChannelsQuarter.value))])
-    .does(`(x: i32, y: i32, result: ptr<function, array<vec4f, inChannelsQuarter>>) {
+    .fn([
+      d.i32,
+      d.i32,
+      d.ptrFn(d.arrayOf(d.vec4f, inChannelsQuarter.value)),
+    ])(`(x: i32, y: i32, result: ptr<function, array<vec4f, inChannelsQuarter>>) {
       let canvasSize = accessViewportSize;
       let coord = vec2u(
         u32(max(0, min(x, i32(canvasSize.x) - 1))),
@@ -127,8 +130,9 @@ const sampleGlobal = tgpu['~unstable'].derived(() => {
 
 const applyReLU = tgpu['~unstable'].derived(() => {
   return tgpu['~unstable']
-    .fn([d.ptrFn(d.arrayOf(d.f32, outChannelsSlot.value))])
-    .does(`(result: ptr<function, array<f32, outChannelsSlot>>) {
+    .fn([
+      d.ptrFn(d.arrayOf(d.f32, outChannelsSlot.value)),
+    ])(`(result: ptr<function, array<f32, outChannelsSlot>>) {
       for (var i = 0u; i < outChannelsSlot; i++) {
         (*result)[i] = max(0, (*result)[i]);
       }
@@ -138,10 +142,10 @@ const applyReLU = tgpu['~unstable'].derived(() => {
 });
 
 const readKernel = tgpu['~unstable']
-  .fn([d.u32], d.vec4f)
-  .does((idx) => {
-    return weights.value[idx];
-  })
+  .fn(
+    [d.u32],
+    d.vec4f,
+  )((idx) => weights.value[idx])
   .$name('readKernel');
 
 const menderConvolveFn = convolveFn({

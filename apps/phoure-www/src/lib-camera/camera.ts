@@ -1,5 +1,9 @@
 import { accessViewportSize } from '@typegpu/common';
-import tgpu, { type TgpuRoot, type TgpuBuffer, type Uniform } from 'typegpu';
+import tgpu, {
+  type TgpuRoot,
+  type TgpuBuffer,
+  type UniformFlag,
+} from 'typegpu';
 import * as d from 'typegpu/data';
 import { mat4, vec3 } from 'wgpu-matrix';
 
@@ -25,16 +29,20 @@ export const getCameraProps = tgpu['~unstable']
   .$name('getCameraProps');
 
 export const constructRayPos = tgpu['~unstable']
-  .fn([], d.vec3f)
-  .does(/* wgsl */ `() -> vec3f {
+  .fn(
+    {},
+    d.vec3f,
+  )(/* wgsl */ `{
     let camera = getCameraProps;
     return (camera.inv_view_matrix * vec4(0., 0., 0., 1.)).xyz;
   }`)
   .$uses({ getCameraProps });
 
 export const constructRayDir = tgpu['~unstable']
-  .fn([d.vec2f], d.vec3f)
-  .does(/* wgsl */ `(coord: vec2f) -> vec3f {
+  .fn(
+    [d.vec2f],
+    d.vec3f,
+  )(/* wgsl */ `(coord: vec2f) -> vec3f {
     let camera = getCameraProps;
     let viewport_size = accessViewportSize;
     var view_coords = (coord - viewport_size / 2.) / viewport_size.y; // y in [-0.5, 0.5]
@@ -53,7 +61,7 @@ export const constructRayDir = tgpu['~unstable']
   .$name('construct_ray_dir');
 
 export class Camera {
-  public readonly cameraBuffer: TgpuBuffer<typeof CameraStruct> & Uniform;
+  public readonly cameraBuffer: TgpuBuffer<typeof CameraStruct> & UniformFlag;
 
   private _lastTime = Date.now();
 

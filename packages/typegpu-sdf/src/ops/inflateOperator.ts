@@ -8,6 +8,8 @@ import { f32 } from 'typegpu/data';
  * @returns 3d sdf
  */
 export const inflate = tgpu['~unstable']
-  .fn([f32, f32], f32)
-  .does((d, r) => d - r)
+  .fn(
+    [f32, f32],
+    f32,
+  )((d, r) => d - r)
   .$name('op_inflate');

@@ -1,4 +1,4 @@
-import tgpu, { type TgpuRoot, type TgpuFn } from 'typegpu';
+import tgpu, { type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 
 import { displayModeAtom } from 'src/lib/controlAtoms.ts';
@@ -11,7 +11,7 @@ const CHANNEL_COLOR = 1;
 const CHANNEL_ALBEDO = 2;
 const CHANNEL_NORMAL = 3;
 
-const getChannelModeSlot = tgpu['~unstable'].slot<TgpuFn<[], d.U32>>();
+const channelMode = tgpu['~unstable'].accessor(d.u32);
 
 const layout = tgpu.bindGroupLayout({
   blurredTex: { texture: 'unfilterable-float' },
@@ -24,7 +24,7 @@ const mainFragFn = tgpu['~unstable']
     out: d.vec4f,
   })(/* wgsl */ `{
     let coord = vec2<i32>(floor(in.coord_f.xy));
-    let channel_mode = getChannelModeSlot();
+    let channel_mode = channelMode;
 
     let blurred = textureLoad(
       blurredTex,
@@ -94,7 +94,7 @@ const mainFragFn = tgpu['~unstable']
   .$uses({
     blurredTex: layout.bound.blurredTex,
     auxTex: layout.bound.auxTex,
-    getChannelModeSlot,
+    channelMode,
     CHANNEL_SPLIT,
     CHANNEL_COLOR,
     CHANNEL_ALBEDO,
@@ -115,22 +115,13 @@ export function makeGBufferDebugger(
     storeOp: 'store' as const,
   };
 
-  const channelModeBuffer = root
-    .createBuffer(d.u32, CHANNEL_SPLIT)
-    .$usage('uniform');
-  const channelModeUniform = channelModeBuffer.as('uniform');
-
-  const myGetChannelMode = tgpu['~unstable']
-    .fn(
-      [],
-      d.u32,
-    )(`() -> u32 {
-      return channelModeUniform;
-    }`)
-    .$uses({ channelModeUniform });
+  const channelModeUniform = root['~unstable'].createUniform(
+    d.u32,
+    CHANNEL_SPLIT,
+  );
 
   const pipeline = root['~unstable']
-    .with(getChannelModeSlot, myGetChannelMode)
+    .with(channelMode, channelModeUniform)
     .withVertex(fullScreenQuadVertexFn, {})
     .withFragment(mainFragFn, {
       format: presentationFormat,
@@ -160,7 +151,7 @@ export function makeGBufferDebugger(
         channelMode = CHANNEL_NORMAL;
       }
 
-      channelModeBuffer.write(channelMode);
+      channelModeUniform.write(channelMode);
       pipeline.withColorAttachment(passColorAttachment).draw(6);
     },
   };

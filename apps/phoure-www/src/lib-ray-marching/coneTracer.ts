@@ -16,10 +16,10 @@ import {
   vec2u,
 } from 'typegpu/data';
 
-import { roundUp } from '../mathUtils';
-import { constructRayDir, constructRayPos } from './camera';
-import { MarchResult } from './marchSdf';
-import worldSdf, { FAR, ShapeContext } from './worldSdf';
+import { roundUp } from '../mathUtils.ts';
+import { constructRayDir, constructRayPos } from './camera.ts';
+import { MarchResult } from './marchSdf.ts';
+import worldSdf, { FAR, ShapeContext } from './worldSdf.ts';
 
 const BlockSize = 8;
 

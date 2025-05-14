@@ -2,6 +2,7 @@ import { convertRgbToY } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
 import tgpu, { type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 import {
   convolveFn,
@@ -68,63 +69,43 @@ const { weights, biases } = layerLayout.bound;
 
 const sampleGlobal = tgpu['~unstable'].derived(() => {
   return tgpu['~unstable']
-    .fn([
-      d.i32,
-      d.i32,
-      d.ptrFn(d.arrayOf(d.vec4f, inChannelsQuarter.value)),
-    ])(`(x: i32, y: i32, result: ptr<function, array<vec4f, inChannelsQuarter>>) {
-      let canvasSize = accessViewportSize;
-      let coord = vec2u(
-        u32(max(0, min(x, i32(canvasSize.x) - 1))),
-        u32(max(0, min(y, i32(canvasSize.y) - 1))),
-      );
-
-      if (inputFromGBufferSlot) {
-        let blurred = textureLoad(
-          blurred_tex,
-          coord,
-          0
+    .fn([d.i32, d.i32, d.ptrFn(d.arrayOf(d.vec4f, inChannelsQuarter.value))])(
+      (x, y, result) => {
+        const canvasSize = accessViewportSize.value;
+        const coord = d.vec2u(
+          d.u32(std.max(0, std.min(x, d.i32(canvasSize.x) - 1))),
+          d.u32(std.max(0, std.min(y, d.i32(canvasSize.y) - 1))),
         );
 
-        var aux = textureLoad(
-          aux_tex,
-          coord,
-          0
-        );
+        if (inputFromGBufferSlot) {
+          const blurred = std.textureLoad(ioLayout.$.blurred_tex, coord, 0);
 
-        (*result)[0] = vec4f(
-          convertRgbToY(blurred.rgb),
-          aux.z, // albedo luminance
-          aux.x, // normal.x
-          aux.y, // normal.y
-        );
-        (*result)[1] = vec4f(
-          aux.w, // emission luminance
-          0,     // zero padding
-          0,     // zero padding
-          0,     // zero padding
-        );
-      }
-      else {
-        for (var i: u32 = 0; i < inChannelsQuarter; i++) {
-          let index =
-            (coord.y * u32(canvasSize.x) +
-            coord.x) * inChannelsQuarter +
-            i;
-          
-          (*result)[i] = input_buffer[index];
+          const aux = std.textureLoad(ioLayout.$.aux_tex, coord, 0);
+
+          result[0] = d.vec4f(
+            convertRgbToY(blurred.xyz),
+            aux.z, // albedo luminance
+            aux.x, // normal.x
+            aux.y, // normal.y
+          );
+          result[1] = d.vec4f(
+            aux.w, // emission luminance
+            0, // zero padding
+            0, // zero padding
+            0, // zero padding
+          );
+        } else {
+          for (let i = d.u32(0); i < inChannelsQuarter.value; i++) {
+            const index =
+              (coord.y * d.u32(canvasSize.x) + coord.x) *
+                inChannelsQuarter.value +
+              i;
+
+            result[i] = ioLayout.$.input_buffer[index];
+          }
         }
-      }
-    }`)
-    .$uses({
-      inChannelsQuarter,
-      accessViewportSize,
-      inputFromGBufferSlot,
-      blurred_tex: ioLayout.bound.blurred_tex,
-      aux_tex: ioLayout.bound.aux_tex,
-      input_buffer: ioLayout.bound.input_buffer,
-      convertRgbToY,
-    })
+      },
+    )
     .$name('sample_global');
 });
 

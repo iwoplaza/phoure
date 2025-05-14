@@ -28,7 +28,7 @@
     "@radix-ui/react-tooltip": "^1.1.6",
     "@typegpu/color": "workspace:*",
     "@typegpu/common": "workspace:*",
-    "@typegpu/noise": "^0.0.5",
+    "@typegpu/noise": "^0.0.6",
     "@typegpu/sdf": "workspace:*",
     "@types/react": "^18.0.2",
     "@types/react-dom": "^18.0.2",

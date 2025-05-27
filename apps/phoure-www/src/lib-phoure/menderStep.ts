@@ -109,16 +109,17 @@ const sampleGlobal = tgpu['~unstable'].derived(() => {
     .$name('sample_global');
 });
 
+const f32Array = (n: number) => d.arrayOf(d.f32, n);
+
 const applyReLU = tgpu['~unstable'].derived(() => {
+  const outChannels = outChannelsSlot.value;
+
   return tgpu['~unstable']
-    .fn([
-      d.ptrFn(d.arrayOf(d.f32, outChannelsSlot.value)),
-    ])(`(result: ptr<function, array<f32, outChannelsSlot>>) {
-      for (var i = 0u; i < outChannelsSlot; i++) {
-        (*result)[i] = max(0, (*result)[i]);
+    .fn([d.ptrFn(f32Array(outChannels))])((result) => {
+      for (let i = 0; i < outChannels; i++) {
+        result[i] = std.max(0, result[i]);
       }
-    }`)
-    .$uses({ outChannelsSlot })
+    })
     .$name('apply_relu');
 });
 

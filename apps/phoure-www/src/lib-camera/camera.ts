@@ -30,9 +30,9 @@ export const getCameraProps = tgpu['~unstable']
 
 export const constructRayPos = tgpu['~unstable']
   .fn(
-    {},
+    [],
     d.vec3f,
-  )(/* wgsl */ `{
+  )(/* wgsl */ `() -> vec3f {
     let camera = getCameraProps;
     return (camera.inv_view_matrix * vec4(0., 0., 0., 1.)).xyz;
   }`)

@@ -27,11 +27,11 @@ export const MarchResult = d.struct({
   position: d.vec3f,
 });
 
-export const march = tgpu['~unstable'].fn({
-  ctx: d.ptrFn(ShapeContext),
-  limit: d.u32,
-  out: d.ptrFn(MarchResult),
-})`{
+export const march = tgpu['~unstable'].fn([
+  d.ptrFn(ShapeContext),
+  d.u32,
+  d.ptrFn(MarchResult),
+])`(ctx: ptr<function, ShapeContext>, limit: u32, out: ptr<function, MarchResult>) {
   var pos = (*ctx).rayPos;
   var prev_dist = -1.;
   var min_dist: f32 = MarchParams.farPlane;
@@ -78,5 +78,7 @@ export const march = tgpu['~unstable'].fn({
   (*out).steps = step;
 }
 `.$uses({
+  ShapeContext,
+  MarchResult,
   MarchParams,
 });

@@ -1,6 +1,7 @@
 import { rgbToYcbcrMatrix, ycbcrToRgbMatrix } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
 import tgpu from 'typegpu';
+import * as std from 'typegpu/std';
 import * as d from 'typegpu/data';
 
 export const combinationLayout = tgpu
@@ -10,40 +11,26 @@ export const combinationLayout = tgpu
   })
   .$name('combinationLayout');
 
-const { blurredTexture, mendedBuffer } = combinationLayout.bound;
+const layout = combinationLayout;
 
-export const combinationEntryFn = tgpu['~unstable']
-  .fragmentFn({
-    in: { coord_f: d.builtin.position, uv: d.vec2f },
-    out: d.vec4f,
-  })(/* wgsl */ `{
-    let coord = vec2u(floor(in.coord_f.xy));
+export const combinationEntryFn = tgpu['~unstable'].fragmentFn({
+  in: { coord_f: d.builtin.position, uv: d.vec2f },
+  out: d.vec4f,
+})((input) => {
+  const coord = d.vec2u(std.floor(input.coord_f.xy));
+  const blurred = std.textureLoad(layout.$.blurredTexture, coord, 0);
+  const blurred_ycbcr = std.mul(blurred.xyz, rgbToYcbcrMatrix.value);
 
-    let blurred = textureLoad(
-      blurredTexture,
-      coord,
-      0
-    );
-  
-    let blurred_ycbcr = blurred.rgb * rgbToYcbcrMatrix;
-  
-    let buffer_idx = coord.y * u32(accessViewportSize.x) + coord.x;
-    let mended_lumi = mendedBuffer[buffer_idx];
-  
-    let combined_ycbcr = vec3f(
-      blurred_ycbcr.r + mended_lumi, // Y
-      blurred_ycbcr.g, // Cb
-      blurred_ycbcr.b, // Cr
-    );
-  
-    let combined = combined_ycbcr * ycbcrToRgbMatrix;
-  
-    return vec4f(combined, 1.0);
-  }`)
-  .$uses({
-    rgbToYcbcrMatrix,
-    ycbcrToRgbMatrix,
-    blurredTexture,
-    mendedBuffer,
-    accessViewportSize,
-  });
+  const buffer_idx = coord.y * d.u32(accessViewportSize.value.x) + coord.x;
+  const mended_lumi = layout.$.mendedBuffer[buffer_idx];
+
+  const combined_ycbcr = d.vec3f(
+    blurred_ycbcr.x + mended_lumi, // Y
+    blurred_ycbcr.y, // Cb
+    blurred_ycbcr.z, // Cr
+  );
+
+  const combined = std.mul(combined_ycbcr, ycbcrToRgbMatrix.value);
+
+  return d.vec4f(combined, 1.0);
+});

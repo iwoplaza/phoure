@@ -1,0 +1,6 @@
+{
+  "fmt": {
+    "singleQuote": true,
+    "exclude": ["pnpm-lock.yaml", "apps/phoure-www/src/lib-phoure/model7.ts"]
+  }
+}

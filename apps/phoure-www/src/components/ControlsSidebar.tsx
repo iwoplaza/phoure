@@ -1,6 +1,6 @@
 import type { CheckedState } from '@radix-ui/react-checkbox';
 import type { SliderProps } from '@radix-ui/react-slider';
-import { type WritableAtom, useAtom, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom, type WritableAtom } from 'jotai';
 import { ChevronDown } from 'lucide-react';
 import { useCallback, useId } from 'react';
 
@@ -28,15 +28,15 @@ import {
 import { Slider } from 'src/components/ui/slider';
 import { accumulatedLayersAtom } from 'src/lib/GameEngine/sdfRenderer/sdfRenderer.ts';
 import {
-  type DisplayMode,
-  DisplayModes,
   autoRotateControlAtom,
   autoRotateSpeedAtom,
   cameraFovControlAtom,
   cameraOrientationControlAtom,
   cameraYControlAtom,
   cameraZoomControlAtom,
+  type DisplayMode,
   displayModeAtom,
+  DisplayModes,
   fixedTimestepAtom,
   fixedTimestepEnabledAtom,
   targetResolutionAtom,
@@ -45,8 +45,8 @@ import { Separator } from './ui/separator';
 
 function ControlLabel(props: { htmlFor: string; children: string }) {
   return (
-    <div className="min-h-[2rem] flex items-center">
-      <Label className="text-xs text-slate-500" htmlFor={props.htmlFor}>
+    <div className='min-h-[2rem] flex items-center'>
+      <Label className='text-xs text-slate-500' htmlFor={props.htmlFor}>
         {props.children}
       </Label>
     </div>
@@ -75,17 +75,17 @@ function SliderControl(
 
   return (
     <>
-      <div className="px-4 mt-2 mb-4">
+      <div className='px-4 mt-2 mb-4'>
         <ControlLabel htmlFor={id}>{label}</ControlLabel>
-        <div className="flex justify-self-stretch gap-2">
+        <div className='flex justify-self-stretch gap-2'>
           <Slider
             {...rest}
             value={[value]}
             onValueChange={onValueChange}
-            className="w-[180px]"
+            className='w-[180px]'
             id={id}
           />
-          <p className="min-w-12 text-right">{value}</p>
+          <p className='min-w-12 text-right'>{value}</p>
         </div>
       </div>
     </>
@@ -109,9 +109,9 @@ function CheckboxControl(props: {
   );
 
   return (
-    <div className="px-4 mt-4 flex items-center justify-between">
+    <div className='px-4 mt-4 flex items-center justify-between'>
       <ControlLabel htmlFor={id}>{label}</ControlLabel>
-      <Checkbox checked={checked} onCheckedChange={onCheckedChange} id="id" />
+      <Checkbox checked={checked} onCheckedChange={onCheckedChange} id='id' />
     </div>
   );
 }
@@ -129,11 +129,11 @@ function DisplayModeControl() {
   );
 
   return (
-    <div className="px-4 my-2">
-      <ControlLabel htmlFor="display-mode">Display mode</ControlLabel>
+    <div className='px-4 my-2'>
+      <ControlLabel htmlFor='display-mode'>Display mode</ControlLabel>
       <Select value={displayMode} onValueChange={onValueChange}>
-        <SelectTrigger className="w-[180px]" id="display-mode">
-          <SelectValue placeholder="Display mode" />
+        <SelectTrigger className='w-[180px]' id='display-mode'>
+          <SelectValue placeholder='Display mode' />
         </SelectTrigger>
         <SelectContent>
           {DisplayModes.map((mode) => (
@@ -160,11 +160,11 @@ function TargetResolutionControl() {
   );
 
   return (
-    <div className="px-4">
-      <ControlLabel htmlFor="target-resolution">Target resolution</ControlLabel>
+    <div className='px-4'>
+      <ControlLabel htmlFor='target-resolution'>Target resolution</ControlLabel>
       <Select value={String(targetResolution)} onValueChange={onValueChange}>
-        <SelectTrigger className="w-[180px]" id="target-resolution">
-          <SelectValue placeholder="Target resolution" />
+        <SelectTrigger className='w-[180px]' id='target-resolution'>
+          <SelectValue placeholder='Target resolution' />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={'256'}>256x256</SelectItem>
@@ -190,12 +190,12 @@ function ControlGroup(props: ControlGroupProps) {
   const { label, children } = props;
 
   return (
-    <Collapsible defaultOpen className="group/collapsible">
+    <Collapsible defaultOpen className='group/collapsible'>
       <SidebarGroup>
         <SidebarGroupLabel asChild>
           <CollapsibleTrigger>
             {label}
-            <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            <ChevronDown className='ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180' />
           </CollapsibleTrigger>
         </SidebarGroupLabel>
         <CollapsibleContent>
@@ -208,20 +208,20 @@ function ControlGroup(props: ControlGroupProps) {
 
 export function ControlsSidebar() {
   return (
-    <Sidebar side="left" variant="sidebar">
+    <Sidebar side='left' variant='sidebar'>
       <SidebarContent>
-        <ControlGroup label="Rendering">
+        <ControlGroup label='Rendering'>
           <DisplayModeControl />
           <TargetResolutionControl />
         </ControlGroup>
         <Separator />
-        <ControlGroup label="Time">
+        <ControlGroup label='Time'>
           <CheckboxControl
-            label="Fixed timestep"
+            label='Fixed timestep'
             valueAtom={fixedTimestepEnabledAtom}
           />
           <SliderControl
-            label="Seconds per frame"
+            label='Seconds per frame'
             valueAtom={fixedTimestepAtom}
             min={0.1}
             step={0.1}
@@ -229,39 +229,39 @@ export function ControlsSidebar() {
           />
         </ControlGroup>
         <Separator />
-        <ControlGroup label="Camera">
+        <ControlGroup label='Camera'>
           <SliderControl
-            label="Up/down position"
+            label='Up/down position'
             valueAtom={cameraYControlAtom}
             min={-0.2}
             step={0.01}
             max={1}
           />
           <SliderControl
-            label="Distance from origin"
+            label='Distance from origin'
             valueAtom={cameraZoomControlAtom}
             min={1}
             step={0.01}
             max={4}
           />
           <SliderControl
-            label="Field of view"
+            label='Field of view'
             valueAtom={cameraFovControlAtom}
             min={20}
             step={1}
             max={170}
           />
           <SliderControl
-            label="Yaw angle"
+            label='Yaw angle'
             valueAtom={cameraOrientationControlAtom}
             max={360}
           />
           <CheckboxControl
-            label="Auto rotate"
+            label='Auto rotate'
             valueAtom={autoRotateControlAtom}
           />
           <SliderControl
-            label="Auto rotate speed"
+            label='Auto rotate speed'
             valueAtom={autoRotateSpeedAtom}
             min={0.5}
             step={0.01}

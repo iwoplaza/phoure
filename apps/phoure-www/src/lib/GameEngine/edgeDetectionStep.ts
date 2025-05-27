@@ -135,7 +135,8 @@ export const EdgeDetectionStep = ({
 
   const canvasSizeUniform = canvasSizeBuffer.asUniform();
 
-  const sampleFn = wgsl.fn`(x: i32, y: i32, result: ptr<function, array<vec4f, 1>>) {
+  const sampleFn = wgsl
+    .fn`(x: i32, y: i32, result: ptr<function, array<vec4f, 1>>) {
     let coord = vec2u(
       u32(max(0, min(x, i32(${canvasSizeUniform}.x) - 1))),
       u32(max(0, min(y, i32(${canvasSizeUniform}.y) - 1))),
@@ -173,11 +174,14 @@ export const EdgeDetectionStep = ({
       '@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>',
     ],
     code: wgsl`
-      ${wgsl.declare`@group(0) @binding(0) var<storage, read_write> output_buffer: array<f32>;`}
-      ${wgsl.declare`@group(0) @binding(1) var<storage, read> input_buffer: array<vec4f>;`}
+      ${wgsl
+      .declare`@group(0) @binding(0) var<storage, read_write> output_buffer: array<f32>;`}
+      ${wgsl
+      .declare`@group(0) @binding(1) var<storage, read> input_buffer: array<vec4f>;`}
       ${wgsl.declare`@group(0) @binding(2) var blurred_tex: texture_2d<f32>;`}
 
-      ${wgsl.declare`@group(1) @binding(0) var<storage, read> conv1Weight: array<vec4f, ${weightCount} / 4>;`}
+      ${wgsl
+      .declare`@group(1) @binding(0) var<storage, read> conv1Weight: array<vec4f, ${weightCount} / 4>;`}
 
       let coord = GlobalInvocationID.xy;
       let lid = LocalInvocationID.xy;

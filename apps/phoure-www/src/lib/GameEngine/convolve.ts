@@ -1,14 +1,14 @@
 import tgpu, { type Eventual, type TgpuFn } from 'typegpu';
 import {
-  type I32,
-  type Ptr,
-  type U32,
-  type Vec4f,
-  type WgslArray,
   arrayOf,
   f32,
+  type I32,
+  type Ptr,
   ptrFn,
+  type U32,
   vec2u,
+  type Vec4f,
+  type WgslArray,
 } from 'typegpu/data';
 
 export type SampleFiller = TgpuFn<
@@ -44,29 +44,28 @@ export const inChannelsQuarter = tgpu['~unstable'].derived(() => {
 
 const _convolveFn = tgpu['~unstable'].derived(() => {
   return tgpu['~unstable']
-    .fn([
-      vec2u,
-      ptrFn(arrayOf(f32, outChannelsSlot.value)),
-    ])(/* wgsl */ `(coord: vec2u, result: ptr<function, array<f32, outChannels>>) {
-      var sample = array<vec4f, inChannelsQuarter>();
+    .fn([vec2u, ptrFn(arrayOf(f32, outChannelsSlot.value))])(
+      /* wgsl */ `(coord: vec2u, result: ptr<function, array<f32, outChannels>>) {
+        var sample = array<vec4f, inChannelsQuarter>();
 
-      var coord_idx: u32 = 0;
-      for (var i: i32 = -i32(kernelRadiusSlot); i <= i32(kernelRadiusSlot); i++) {
-        for (var j: i32 = -i32(kernelRadiusSlot); j <= i32(kernelRadiusSlot); j++) {
-          fillSample(i32(coord.x) + i, i32(coord.y) + j, &sample);
+        var coord_idx: u32 = 0;
+        for (var i: i32 = -i32(kernelRadiusSlot); i <= i32(kernelRadiusSlot); i++) {
+          for (var j: i32 = -i32(kernelRadiusSlot); j <= i32(kernelRadiusSlot); j++) {
+            fillSample(i32(coord.x) + i, i32(coord.y) + j, &sample);
 
-          for (var out_c: u32 = 0; out_c < outChannels; out_c++) {
-            var weight_idx = (coord_idx + out_c * (2 * kernelRadiusSlot + 1) * (2 * kernelRadiusSlot + 1)) * inChannelsQuarter;
-            for (var in_c: u32 = 0; in_c < inChannelsQuarter; in_c++) {
-              (*result)[out_c] += dot(sample[in_c], readKernel(weight_idx));
-              weight_idx++;
+            for (var out_c: u32 = 0; out_c < outChannels; out_c++) {
+              var weight_idx = (coord_idx + out_c * (2 * kernelRadiusSlot + 1) * (2 * kernelRadiusSlot + 1)) * inChannelsQuarter;
+              for (var in_c: u32 = 0; in_c < inChannelsQuarter; in_c++) {
+                (*result)[out_c] += dot(sample[in_c], readKernel(weight_idx));
+                weight_idx++;
+              }
             }
-          }
 
-          coord_idx++;
+            coord_idx++;
+          }
         }
-      }
-    }`)
+      }`,
+    )
     .$uses({
       inChannelsQuarter,
       outChannels: outChannelsSlot,

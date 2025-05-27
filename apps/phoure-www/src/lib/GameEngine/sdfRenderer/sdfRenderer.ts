@@ -9,11 +9,11 @@ import {
   getCameraProps,
 } from 'src/lib-camera';
 import {
+  estimateNormal,
+  march,
   MarchParams,
   MarchResult,
   ShapeContext,
-  estimateNormal,
-  march,
 } from 'src/lib-ray-marching';
 import tgpu, { type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
@@ -50,24 +50,21 @@ export const accumulatedLayersAtom = atom(0);
  * @param mat_roughness
  */
 const reflect = tgpu['~unstable']
-  .fn([
-    d.vec3f,
-    d.vec3f,
-    d.f32,
-    d.ptrFn(d.f32),
-  ])(`(rayDir: vec3f, normal: vec3f, matRoughness: f32, outRoughness: ptr<function, f32>) -> vec3f {
-    let slope = dot(rayDir, normal);
-    let dn2 = 2. * slope;
-    let refl_dir = rayDir - dn2 * normal;
+  .fn([d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)])(
+    `(rayDir: vec3f, normal: vec3f, matRoughness: f32, outRoughness: ptr<function, f32>) -> vec3f {
+      let slope = dot(rayDir, normal);
+      let dn2 = 2. * slope;
+      let refl_dir = rayDir - dn2 * normal;
 
-    let fresnel = 1. - pow(1. + slope, 16.);
-    let roughness = matRoughness * fresnel;
-    *outRoughness = roughness;
+      let fresnel = 1. - pow(1. + slope, 16.);
+      let roughness = matRoughness * fresnel;
+      *outRoughness = roughness;
 
-    var new_ray_dir = randf.onHemisphere(normal);
-    new_ray_dir = mix(refl_dir, new_ray_dir, roughness);
-    return normalize(new_ray_dir);
-  }`)
+      var new_ray_dir = randf.onHemisphere(normal);
+      new_ray_dir = mix(refl_dir, new_ray_dir, roughness);
+      return normalize(new_ray_dir);
+    }`,
+  )
   .$uses({ randf })
   .$name('reflect');
 

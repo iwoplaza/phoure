@@ -1,7 +1,7 @@
 import { accessViewportSize } from '@typegpu/common';
 import tgpu, {
-  type TgpuRoot,
   type TgpuBuffer,
+  type TgpuRoot,
   type UniformFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
@@ -76,8 +76,8 @@ export class Camera {
 
     const invViewMatrix = mat4.identity(d.mat4x4f());
 
-    const manualOrientation =
-      (store.get(cameraOrientationControlAtom) / 180) * Math.PI;
+    const manualOrientation = (store.get(cameraOrientationControlAtom) / 180) *
+      Math.PI;
     const autoOrientation = (store.get(autoCameraOrientation) / 180) * Math.PI;
 
     const rad = store.get(autoRotateControlAtom)

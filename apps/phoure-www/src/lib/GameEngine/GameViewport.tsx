@@ -21,7 +21,7 @@ function GameViewport() {
   });
 
   /* Sometimes the pixel density varies from 1-to-1, so it might be double the resolution */
-  return <canvas ref={canvasRef} width="256" height="256" />;
+  return <canvas ref={canvasRef} width='256' height='256' />;
 }
 
 export default GameViewport;

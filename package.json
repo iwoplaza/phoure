@@ -10,8 +10,8 @@
     "build": "pnpm run -r build",
     "test": "pnpm -r build && pnpm run '/^test:.*/'",
     "test:types": "pnpm run -r test:types",
-    "check": "biome check",
-    "fix": "biome check --write"
+    "check": "biome check && deno fmt --check",
+    "fix": "biome check --write && deno fmt"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

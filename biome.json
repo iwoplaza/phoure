@@ -15,11 +15,13 @@
   },
   "json": {
     "formatter": {
+      "enabled": false,
       "indentStyle": "space"
     }
   },
   "javascript": {
     "formatter": {
+      "enabled": false,
       "indentStyle": "space",
       "quoteStyle": "single"
     }

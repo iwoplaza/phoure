@@ -96,10 +96,8 @@ const sampleGlobal = tgpu['~unstable'].derived(() => {
           );
         } else {
           for (let i = d.u32(0); i < inChannelsQuarter.value; i++) {
-            const index =
-              (coord.y * d.u32(canvasSize.x) + coord.x) *
-                inChannelsQuarter.value +
-              i;
+            const index = (coord.y * d.u32(canvasSize.x) + coord.x) *
+                inChannelsQuarter.value + i;
 
             result[i] = ioLayout.$.input_buffer[index];
           }

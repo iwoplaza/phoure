@@ -18,7 +18,7 @@ export class PerformanceManager {
     // Logging every 100 measurements.
     if (
       this._deltaTimeMeasurements.length ===
-      Math.floor(this._deltaTimeMeasurements.length / 100) * 100
+        Math.floor(this._deltaTimeMeasurements.length / 100) * 100
     ) {
       console.log(`Did ${this._deltaTimeMeasurements.length} measurements.`);
     }

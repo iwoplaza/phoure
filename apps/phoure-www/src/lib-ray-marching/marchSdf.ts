@@ -1,14 +1,13 @@
 import tgpu, { type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import { ShapeContext } from './types.ts';
 
-const sampleSdfShell = tgpu['~unstable'].fn([d.vec3f], d.f32);
 type SampleSdf = TgpuFn<[d.Vec3f], d.F32>;
 
-const defaultGetSurfaceThreshold = tgpu['~unstable'].fn(
-  [ShapeContext],
-  d.f32,
-)((_ctx) => 0.001);
+const defaultGetSurfaceThreshold = tgpu['~unstable'].fn([ShapeContext], d.f32)(
+  (_ctx) => 0.001,
+);
 
 export const MarchParams = {
   maxSteps: tgpu['~unstable'].slot(500),
@@ -31,17 +30,17 @@ export const march = tgpu['~unstable'].fn([
   d.ptrFn(ShapeContext),
   d.u32,
   d.ptrFn(MarchResult),
-])`(ctx: ptr<function, ShapeContext>, limit: u32, out: ptr<function, MarchResult>) {
-  var pos = (*ctx).rayPos;
-  var prev_dist = -1.;
-  var min_dist: f32 = MarchParams.farPlane;
+])((ctx, limit, out) => {
+  let pos = d.vec3f(ctx.rayPos);
+  let prev_dist = d.f32(-1);
+  let min_dist = d.f32(MarchParams.farPlane.value);
 
-  var step = 0u;
-  var progress = 0.;
+  let step = d.u32(0);
+  let progress = d.f32(0);
 
   for (; step <= limit; step++) {
-    pos = (*ctx).rayPos + (*ctx).rayDir * progress;
-    min_dist = MarchParams.sampleSdf(pos);
+    pos = std.add(ctx.rayPos, std.mul(ctx.rayDir, progress));
+    min_dist = MarchParams.sampleSdf.value(pos);
 
     // Inside volume?
     if (min_dist <= 0.) {
@@ -49,16 +48,19 @@ export const march = tgpu['~unstable'].fn([
       break;
     }
 
-    if (min_dist < MarchParams.getSurfaceThreshold(*ctx) && min_dist < prev_dist) {
+    if (
+      min_dist < MarchParams.getSurfaceThreshold.value(ctx) &&
+      min_dist < prev_dist
+    ) {
       // No need to check more objects.
       break;
     }
 
     // march forward safely
     progress += min_dist;
-    (*ctx).rayDistance += min_dist;
+    ctx.rayDistance += min_dist;
 
-    if (progress > MarchParams.farPlane) {
+    if (progress > MarchParams.farPlane.value) {
       // Stop checking.
       break;
     }
@@ -66,19 +68,17 @@ export const march = tgpu['~unstable'].fn([
     prev_dist = min_dist;
   }
 
-  (*out).position = pos;
+  out.position = pos;
 
   // Not near surface or distance rising?
-  if (min_dist > MarchParams.getSurfaceThreshold(*ctx) * 2. || min_dist > prev_dist) {
+  if (
+    min_dist > MarchParams.getSurfaceThreshold.value(ctx) * 2. ||
+    min_dist > prev_dist
+  ) {
     // Sky
-    (*out).steps = MarchParams.maxSteps + 1u;
+    out.steps = MarchParams.maxSteps.value + 1;
     return;
   }
 
-  (*out).steps = step;
-}
-`.$uses({
-  ShapeContext,
-  MarchResult,
-  MarchParams,
+  out.steps = step;
 });

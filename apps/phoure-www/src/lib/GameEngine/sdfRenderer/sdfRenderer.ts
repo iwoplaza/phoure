@@ -1,3 +1,6 @@
+import tgpu, { type TgpuRoot } from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import { convertRgbToY } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
 import { randf } from '@typegpu/noise';
@@ -15,8 +18,6 @@ import {
   MarchResult,
   ShapeContext,
 } from 'src/lib-ray-marching';
-import tgpu, { type TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
 
 import { store } from 'src/lib/store.ts';
 import type { GBuffer } from '../../gBuffer.ts';
@@ -69,10 +70,7 @@ const reflect = tgpu['~unstable']
   .$name('reflect');
 
 const renderSubPixel = tgpu['~unstable']
-  .fn(
-    [d.vec2f],
-    d.vec3f,
-  )(/* wgsl */ `(coord: vec2f) -> vec3f {
+  .fn([d.vec2f], d.vec3f)(/* wgsl */ `(coord: vec2f) -> vec3f {
     // doing the first march before each sub-sample, since the first march result is the same for all of them
 
     var init_shape_ctx: ShapeContext;
@@ -188,46 +186,51 @@ const mainComputeFn = tgpu['~unstable']
   .computeFn({
     workgroupSize: [BlockSize, BlockSize],
     in: { gid: d.builtin.globalInvocationId },
-  })(/* wgsl */ `{
-    setupRandomSeed(vec2f(in.gid.xy) * ${Math.random()} + getRandomSeedPrimer * ${Math.random()});
+  })((input) => {
+    randf.seed2(
+      std.add(
+        std.mul(d.vec2f(input.gid.xy), 0.1646936793),
+        std.mul(getRandomSeedPrimer.value, 0.934534732),
+      ),
+    );
 
-    let prev_layers = getAccumulatedLayers;
-    let prev_render = textureLoad(previousRender, in.gid.xy, 0);
-  
-    var acc = vec3f(0., 0., 0.);
-    for (var sx = 0u; sx < SUPER_SAMPLES; sx++) {
-      for (var sy = 0u; sy < SUPER_SAMPLES; sy++) {
-        let offset = vec2f(
-          (f32(sx) + 0.5) * ONE_OVER_SUPER_SAMPLES,
-          (f32(sy) + 0.5) * ONE_OVER_SUPER_SAMPLES,
+    const prev_layers = getAccumulatedLayers.value;
+    const prev_render = std.textureLoad(
+      mainLayout.$.previousRender,
+      input.gid.xy,
+      0,
+    );
+
+    let acc = d.vec3f(0., 0., 0.);
+    for (let sx = d.u32(0); sx < SUPER_SAMPLES; sx++) {
+      for (let sy = d.u32(0); sy < SUPER_SAMPLES; sy++) {
+        const offset = d.vec2f(
+          (d.f32(sx) + 0.5) * ONE_OVER_SUPER_SAMPLES,
+          (d.f32(sy) + 0.5) * ONE_OVER_SUPER_SAMPLES,
         );
-  
-        acc += renderSubPixel(vec2f(in.gid.xy) + offset);
+
+        acc = std.add(
+          acc,
+          renderSubPixel(std.add(d.vec2f(input.gid.xy), offset)),
+        );
       }
     }
-  
-    acc *= ONE_OVER_SUPER_SAMPLES * ONE_OVER_SUPER_SAMPLES;
-  
+
+    acc = std.mul(acc, ONE_OVER_SUPER_SAMPLES * ONE_OVER_SUPER_SAMPLES);
+
     // applying gamma correction
-    let gamma = 2.2;
-    acc = pow(acc, vec3(1.0 / gamma));
-  
-    var new_render = vec4(acc, 1.0);
+    const gamma = 2.2;
+    acc = std.pow(acc, d.vec3f(d.f32(1) / gamma));
+
+    let new_render = d.vec4f(acc, 1.0);
     if (prev_layers > 0) {
-      new_render = (prev_render * prev_layers + vec4(acc, 1.0)) / (prev_layers + 1);
+      new_render = std.div(
+        std.add(std.mul(prev_render, prev_layers), d.vec4f(acc, 1.0)),
+        prev_layers + 1,
+      );
     }
-  
-    textureStore(mainOutput, in.gid.xy, new_render);
-  }`)
-  .$uses({
-    SUPER_SAMPLES,
-    ONE_OVER_SUPER_SAMPLES,
-    previousRender: mainLayout.bound.previousRender,
-    mainOutput: mainLayout.bound.mainOutput,
-    setupRandomSeed: randf.seed2,
-    renderSubPixel,
-    getRandomSeedPrimer,
-    getAccumulatedLayers,
+
+    std.textureStore(mainLayout.$.mainOutput, input.gid.xy, new_render);
   });
 
 const auxLayout = tgpu

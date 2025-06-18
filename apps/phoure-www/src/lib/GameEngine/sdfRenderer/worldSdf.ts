@@ -2,7 +2,7 @@ import { sphere } from '@typegpu/sdf';
 import { MarchParams, ShapeContext } from 'src/lib-ray-marching';
 import tgpu, { type TgpuFnShell } from 'typegpu';
 import * as d from 'typegpu/data';
-import { min, mul } from 'typegpu/std';
+import { abs, floor, min, mix, mul, pow } from 'typegpu/std';
 
 export const Material = d.struct({
   albedo: d.vec3f,
@@ -43,17 +43,13 @@ const objFloor = sdfShell((pos) => {
 });
 
 const matFloor = tgpu['~unstable']
-  .fn([
-    d.vec3f,
-    d.ptrFn(Material),
-  ])(/* wgsl */ `(pos: vec3f, mtr: ptr<function, Material>) {
-    let uv = floor(5.0 * pos.xz);
-    let c = 0.2 + 0.5 * ((uv.x + uv.y) - 2.0 * floor((uv.x + uv.y) / 2.0));
+  .fn([d.vec3f, d.ptrFn(Material)])((pos, mtr) => {
+    const uv = floor(mul(5, pos.xz));
+    const c = 0.2 + 0.5 * ((uv.x + uv.y) - 2.0 * floor((uv.x + uv.y) / 2.0));
     
-    (*mtr).albedo = mix(vec3(1., 1., 1.), vec3(0., 0., 0.), c);
-    (*mtr).roughness = 0.9;
-  }`)
-  .$uses({ Material })
+    mtr.albedo = mix(d.vec3f(1., 1., 1.), d.vec3f(0., 0., 0.), c);
+    mtr.roughness = 0.9;
+  })
   .$name('mat_floor');
 
 export const FAR = 100;
@@ -72,21 +68,10 @@ export const worldSdf = sdfShell((pos) => {
 
 // MATERIALS
 
-export const skyColor = tgpu['~unstable'].fn(
-  [d.vec3f],
-  d.vec3f,
-)(/* wgsl */ `(dir: vec3f) -> vec3f {
-    let t = pow(min(abs(dir.y) * 4, 1.), 0.4);
-    
-    let uv = floor(30.0 * dir.xy);
-    let c = 0.2 + 0.5 * ((uv.x + uv.y) - 2.0 * floor((uv.x + uv.y) / 2.0));
-
-    return mix(
-      vec3f(0.7, 0.7, 0.75), // horizon
-      vec3f(0.35, 0.4, 0.6),
-      t,
-    );
-  }`);
+export const skyColor = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((dir) => {
+  const t = pow(min(abs(dir.y) * 4, 1.), 0.4);
+  return mix(d.vec3f(0.7, 0.7, 0.75), d.vec3f(0.35, 0.4, 0.6), t);
+});
 
 export const worldMat = tgpu['~unstable']
   .fn([d.vec3f, ShapeContext, d.ptrFn(Material)])((pos, ctx, out) => {

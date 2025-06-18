@@ -51,8 +51,8 @@ export const accumulatedLayersAtom = atom(0);
  * @param mat_roughness
  */
 const reflect = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)])(
-    `(rayDir: vec3f, normal: vec3f, matRoughness: f32, outRoughness: ptr<function, f32>) -> vec3f {
+  .fn([d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)], d.vec3f)(
+    `(rayDir, normal, matRoughness, outRoughness) {
       let slope = dot(rayDir, normal);
       let dn2 = 2. * slope;
       let refl_dir = rayDir - dn2 * normal;

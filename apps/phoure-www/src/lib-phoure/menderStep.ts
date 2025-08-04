@@ -28,10 +28,8 @@ type Options = {
   targetTexture: () => GPUTextureView;
 };
 
-const reluSlot = tgpu['~unstable'].slot<boolean>().$name('relu');
-const inputFromGBufferSlot = tgpu['~unstable']
-  .slot<boolean>()
-  .$name('input_from_gbuffer');
+const reluSlot = tgpu.slot<boolean>();
+const inputFromGBufferSlot = tgpu.slot<boolean>();
 const BLOCK_SIZE = 8;
 
 // const convolveLocalFn = wgsl.fn`(local: vec2u, result: ptr<function, array<f32, ${outChannelsSlot}>>) {
@@ -68,7 +66,7 @@ const ioLayout = tgpu.bindGroupLayout({
 const { weights, biases } = layerLayout.bound;
 
 const sampleGlobal = tgpu['~unstable'].derived(() => {
-  return tgpu['~unstable']
+  return tgpu
     .fn([d.i32, d.i32, d.ptrFn(d.arrayOf(d.vec4f, inChannelsQuarter.value))])(
       (x, y, result) => {
         const canvasSize = accessViewportSize.value;
@@ -77,7 +75,7 @@ const sampleGlobal = tgpu['~unstable'].derived(() => {
           d.u32(std.max(0, std.min(y, d.i32(canvasSize.y) - 1))),
         );
 
-        if (inputFromGBufferSlot) {
+        if (inputFromGBufferSlot.$) {
           const blurred = std.textureLoad(ioLayout.$.blurred_tex, coord, 0);
 
           const aux = std.textureLoad(ioLayout.$.aux_tex, coord, 0);
@@ -96,8 +94,10 @@ const sampleGlobal = tgpu['~unstable'].derived(() => {
           );
         } else {
           for (let i = d.u32(0); i < inChannelsQuarter.value; i++) {
-            const index = (coord.y * d.u32(canvasSize.x) + coord.x) *
-                inChannelsQuarter.value + i;
+            const index =
+              (coord.y * d.u32(canvasSize.x) + coord.x) *
+                inChannelsQuarter.value +
+              i;
 
             result[i] = ioLayout.$.input_buffer[index];
           }
@@ -121,56 +121,49 @@ const applyReLU = tgpu['~unstable'].derived(() => {
     .$name('apply_relu');
 });
 
-const readKernel = tgpu['~unstable']
-  .fn(
-    [d.u32],
-    d.vec4f,
-  )((idx) => weights.value[idx])
-  .$name('readKernel');
+const readKernel = tgpu.fn([d.u32], d.vec4f)((idx) => weights.value[idx]);
 
 const menderConvolveFn = convolveFn({
   sampleFiller: sampleGlobal,
   kernelReader: readKernel,
 });
 
-const entryComputeFn = tgpu['~unstable']
-  .computeFn({
-    workgroupSize: [BLOCK_SIZE, BLOCK_SIZE],
-    in: {
-      gid: d.builtin.globalInvocationId,
-    },
-  })(/* wgsl */ `{
+const entryComputeFn = tgpu['~unstable'].computeFn({
+  workgroupSize: [BLOCK_SIZE, BLOCK_SIZE],
+  in: {
+    gid: d.builtin.globalInvocationId,
+  },
+})`{
     var result: array<f32, OUT_CHANNELS>;
-    
+
     for (var i = 0; i < OUT_CHANNELS; i += 1) {
       result[i] = biases[i];
     }
 
     menderConvolveFn(in.gid.xy, &result);
-  
+
     if (reluSlot) {
       applyReLU(&result);
     }
 
     let canvasSize = accessViewportSize;
-  
+
     let output_buffer_begin =
       (in.gid.y * u32(canvasSize.x) +
       in.gid.x) * OUT_CHANNELS;
-  
+
     for (var i: u32 = 0; i < OUT_CHANNELS; i++) {
       output_buffer[output_buffer_begin + i] = result[i];
     }
-  }`)
-  .$uses({
-    menderConvolveFn,
-    reluSlot,
-    applyReLU,
-    biases,
-    accessViewportSize,
-    output_buffer: ioLayout.bound.output_buffer,
-    OUT_CHANNELS: outChannelsSlot,
-  });
+  }`.$uses({
+  menderConvolveFn,
+  reluSlot,
+  applyReLU,
+  biases,
+  accessViewportSize,
+  output_buffer: ioLayout.bound.output_buffer,
+  OUT_CHANNELS: outChannelsSlot,
+});
 
 export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
   // Resource locators

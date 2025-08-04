@@ -15,7 +15,11 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["README.md", "package.json", "dist"],
+  "files": [
+    "README.md",
+    "package.json",
+    "dist"
+  ],
   "scripts": {
     "build": "rollup -c",
     "dev:build": "rollup -c",
@@ -32,6 +36,6 @@
     "typegpu": "catalog:"
   },
   "peerDependencies": {
-    "typegpu": "^0.3.0"
+    "typegpu": "^0.7.0"
   }
 }

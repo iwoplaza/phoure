@@ -28,7 +28,7 @@
     "@radix-ui/react-tooltip": "^1.1.6",
     "@typegpu/color": "workspace:*",
     "@typegpu/common": "workspace:*",
-    "@typegpu/noise": "^0.0.9",
+    "@typegpu/noise": "^0.1.0",
     "@typegpu/sdf": "workspace:*",
     "@types/react": "^18.0.2",
     "@types/react-dom": "^18.0.2",
@@ -48,9 +48,9 @@
     "tailwindcss-animate": "^1.0.7",
     "typegpu": "catalog:",
     "unplugin-typegpu": "catalog:",
-    "wgpu-matrix": "^3.3.0"
+    "wgpu-matrix": "^3.4.0"
   },
   "devDependencies": {
-    "@webgpu/types": "^0.1.34"
+    "@webgpu/types": "^0.1.64"
   }
 }

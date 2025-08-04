@@ -12,28 +12,18 @@ import {
 } from 'typegpu/data';
 
 export type SampleFiller = TgpuFn<
-  [x: I32, y: I32, outSamplerPtr: Ptr<'function', WgslArray<Vec4f>>]
+  (x: I32, y: I32, outSamplerPtr: Ptr<'function', WgslArray<Vec4f>>) => void
 >;
-export type KernelReader = TgpuFn<[idx: U32], Vec4f>;
+export type KernelReader = TgpuFn<(idx: U32) => Vec4f>;
 
 /**
  * Has to be divisible by 4
  */
-export const inChannelsSlot = tgpu['~unstable']
-  .slot<number>()
-  .$name('in_channels');
-export const outChannelsSlot = tgpu['~unstable']
-  .slot<number>()
-  .$name('out_channels');
-export const kernelRadiusSlot = tgpu['~unstable']
-  .slot<number>()
-  .$name('kernel_radius');
-const sampleFillerSlot = tgpu['~unstable']
-  .slot<SampleFiller>()
-  .$name('sample_filler');
-const kernelReaderSlot = tgpu['~unstable']
-  .slot<KernelReader>()
-  .$name('kernel_reader');
+export const inChannelsSlot = tgpu.slot<number>().$name('in_channels');
+export const outChannelsSlot = tgpu.slot<number>().$name('out_channels');
+export const kernelRadiusSlot = tgpu.slot<number>().$name('kernel_radius');
+const sampleFillerSlot = tgpu.slot<SampleFiller>().$name('sample_filler');
+const kernelReaderSlot = tgpu.slot<KernelReader>().$name('kernel_reader');
 
 export const inChannelsQuarter = tgpu['~unstable'].derived(() => {
   if (inChannelsSlot.value % 4 !== 0) {
@@ -43,7 +33,7 @@ export const inChannelsQuarter = tgpu['~unstable'].derived(() => {
 });
 
 const _convolveFn = tgpu['~unstable'].derived(() => {
-  return tgpu['~unstable']
+  return tgpu
     .fn([vec2u, ptrFn(arrayOf(f32, outChannelsSlot.value))])(
       /* wgsl */ `(coord: vec2u, result: ptr<function, array<f32, outChannels>>) {
         var sample = array<vec4f, inChannelsQuarter>();

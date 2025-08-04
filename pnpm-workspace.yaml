@@ -4,5 +4,5 @@ packages:
 
 # Define a catalog of version ranges.
 catalog:
-  typegpu: ^0.5.9
-  unplugin-typegpu: ^0.1.4
+  typegpu: ^0.7.0
+  unplugin-typegpu: ^0.2.2

@@ -21,14 +21,11 @@ import {
 
 import { store } from 'src/lib/store.ts';
 import type { GBuffer } from '../../gBuffer.ts';
-import { ONES_3F } from '../wgslUtils/mathConstants.ts';
 import { Material, skyColor, worldMat, worldSdf } from './worldSdf.ts';
 
 const BlockSize = 8;
 
 // parameters
-const OutputFormat = tgpu['~unstable'].slot().$name('output_format');
-
 const SUPER_SAMPLES = 4;
 const ONE_OVER_SUPER_SAMPLES = 1 / SUPER_SAMPLES;
 const SUB_SAMPLES = 16;
@@ -42,6 +39,8 @@ const Reflection = d.struct({
   roughness: d.f32,
 });
 
+const ReflectionArray = d.arrayOf(Reflection, MAX_REFL);
+
 export const accumulatedLayersAtom = atom(0);
 
 /**
@@ -50,140 +49,123 @@ export const accumulatedLayersAtom = atom(0);
  * @param normal
  * @param mat_roughness
  */
-const reflect = tgpu['~unstable']
-  .fn(
-    [d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)],
-    d.vec3f,
-  )(
-    `(rayDir, normal, matRoughness, outRoughness) {
-      let slope = dot(rayDir, normal);
-      let dn2 = 2. * slope;
-      let refl_dir = rayDir - dn2 * normal;
+const reflect = tgpu.fn(
+  [d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)],
+  d.vec3f,
+)((rayDir, normal, matRoughness, outRoughness) => {
+  const slope = std.dot(rayDir, normal);
+  const refl_dir = rayDir.sub(normal.mul(2 * slope));
 
-      let fresnel = 1. - pow(1. + slope, 16.);
-      let roughness = matRoughness * fresnel;
-      *outRoughness = roughness;
+  const fresnel = 1 - std.pow(1 + slope, 16);
+  const roughness = matRoughness * fresnel;
+  // TODO: Fix when boxed values are introduced
+  // biome-ignore lint/style/noParameterAssign: Has to be done like this for now
+  outRoughness = roughness;
 
-      var new_ray_dir = randf.onHemisphere(normal);
-      new_ray_dir = mix(refl_dir, new_ray_dir, roughness);
-      return normalize(new_ray_dir);
-    }`,
-  )
-  .$uses({ randf })
-  .$name('reflect');
+  let new_ray_dir = randf.onHemisphere(normal);
+  new_ray_dir = std.mix(refl_dir, new_ray_dir, roughness);
+  return std.normalize(new_ray_dir);
+});
 
-const renderSubPixel = tgpu['~unstable']
-  .fn(
-    [d.vec2f],
-    d.vec3f,
-  )(
-    /* wgsl */ `(coord: vec2f) -> vec3f {
-    // doing the first march before each sub-sample, since the first march result is the same for all of them
+const renderSubPixel = tgpu.fn(
+  [d.vec2f],
+  d.vec3f,
+)((coord) => {
+  // doing the first march before each sub-sample, since the first march result is the same for all of them
 
-    var init_shape_ctx: ShapeContext;
-    init_shape_ctx.rayPos = constructRayPos();
-    init_shape_ctx.rayDir = constructRayDir(coord);
-    init_shape_ctx.rayDistance = 0.;
-    var init_march_result: MarchResult;
-
-    march(&init_shape_ctx, MAX_STEPS, &init_march_result);
-
-    if (init_march_result.steps >= MAX_STEPS) {
-      return min(skyColor(init_shape_ctx.rayDir), ONES_3F);
-    }
-
-    let init_normal = estimateNormal(init_march_result.position, init_shape_ctx);
-
-    var init_material: Material;
-    worldMat(init_march_result.position, init_shape_ctx, &init_material);
-
-    if (init_material.emissive) {
-      return min(init_material.albedo, ONES_3F);
-    }
-
-    var reflections: array<Reflection, MAX_REFL>;
-
-    var acc = vec3f(0., 0., 0.);
-    for (var sub = 0u; sub < SUB_SAMPLES; sub++) {
-      var material: Material = init_material;
-      var normal = init_normal;
-
-      var emissive_color = vec3f(0., 0., 0.);
-      var refl_count = 0u;
-
-      var shape_ctx: ShapeContext;
-      shape_ctx.rayPos = init_march_result.position;
-      shape_ctx.rayDir = init_shape_ctx.rayDir;
-      shape_ctx.rayDistance = init_shape_ctx.rayDistance;
-
-      for (var refl = 0u; refl < MAX_REFL; refl++) {
-        var roughness: f32 = 0.;
-        shape_ctx.rayDir = reflect(
-          shape_ctx.rayDir,
-          normal,
-          material.roughness,
-          &roughness,
-        );
-        reflections[refl_count].color = material.albedo;
-        reflections[refl_count].roughness = roughness;
-        refl_count++;
-
-        var march_result: MarchResult;
-        march(&shape_ctx, MAX_STEPS, &march_result);
-        shape_ctx.rayPos = march_result.position;
-
-        if (march_result.steps >= MAX_STEPS) {
-          emissive_color = skyColor(shape_ctx.rayDir);
-          break;
-        }
-
-        normal = estimateNormal(shape_ctx.rayPos, shape_ctx);
-
-        worldMat(shape_ctx.rayPos, shape_ctx, &material);
-
-        if (material.emissive) {
-          emissive_color = material.albedo;
-          break;
-        }
-      }
-
-      var sub_acc = emissive_color;
-      for (var i = i32(refl_count) - 1; i >= 0; i--) {
-        let mat_color = reflections[i].color;
-        let reflectivity = 1. - reflections[i].roughness;
-
-        sub_acc *= mix(mat_color, ONES_3F, max(0., min(reflectivity, 1.))); // absorb the ray color based on reflectivity
-      }
-
-      acc += sub_acc;
-    }
-
-    // averaging
-    acc /= f32(SUB_SAMPLES);
-
-    // clipping
-    acc = min(acc, ONES_3F);
-
-    return acc;
-  }`,
-  )
-  .$uses({
-    SUB_SAMPLES,
-    MAX_STEPS: MarchParams.maxSteps,
-    MAX_REFL,
-    ONES_3F,
-    MarchResult,
-    Material,
-    Reflection,
-    ShapeContext,
-    constructRayPos,
-    constructRayDir,
-    estimateNormal,
-    march,
-    skyColor,
-    worldMat,
-    reflect,
+  const init_shape_ctx = ShapeContext({
+    rayPos: constructRayPos(),
+    rayDir: constructRayDir(coord),
+    rayDistance: 0,
   });
+  const init_march_result = MarchResult();
+
+  march(init_shape_ctx, MarchParams.maxSteps.$, init_march_result);
+
+  if (init_march_result.steps >= MarchParams.maxSteps.$) {
+    return std.min(skyColor(init_shape_ctx.rayDir), d.vec3f(1));
+  }
+
+  const init_normal = estimateNormal(
+    init_march_result.position,
+    init_shape_ctx,
+  );
+  const init_material = Material();
+
+  worldMat(init_march_result.position, init_shape_ctx, init_material);
+
+  if (init_material.emissive) {
+    return std.min(init_material.albedo, d.vec3f(1));
+  }
+
+  const reflections = ReflectionArray();
+
+  let acc = d.vec3f();
+  for (let sub = d.u32(0); sub < SUB_SAMPLES; sub++) {
+    const material = Material(init_material);
+
+    let normal = d.vec3f(init_normal);
+    let emissive_color = d.vec3f();
+    let refl_count = d.u32(0);
+
+    const shape_ctx = ShapeContext({
+      rayPos: init_march_result.position,
+      rayDir: init_shape_ctx.rayDir,
+      rayDistance: init_shape_ctx.rayDistance,
+    });
+
+    for (let refl = d.u32(0); refl < MAX_REFL; refl++) {
+      const roughness = d.f32(0);
+      shape_ctx.rayDir = reflect(
+        shape_ctx.rayDir,
+        normal,
+        material.roughness,
+        roughness,
+      );
+      reflections[refl_count].color = material.albedo;
+      reflections[refl_count].roughness = roughness;
+      refl_count++;
+
+      const march_result = MarchResult();
+      march(shape_ctx, MarchParams.maxSteps.$, march_result);
+      shape_ctx.rayPos = march_result.position;
+
+      if (march_result.steps >= MarchParams.maxSteps.$) {
+        emissive_color = skyColor(shape_ctx.rayDir);
+        break;
+      }
+
+      normal = estimateNormal(shape_ctx.rayPos, shape_ctx);
+
+      worldMat(shape_ctx.rayPos, shape_ctx, material);
+
+      if (material.emissive) {
+        emissive_color = material.albedo;
+        break;
+      }
+    }
+
+    let sub_acc = d.vec3f(emissive_color);
+    for (let i = d.i32(refl_count) - 1; i >= 0; i--) {
+      const mat_color = d.vec3f(reflections[i].color);
+      const reflectivity = 1 - reflections[i].roughness;
+
+      sub_acc = sub_acc.mul(
+        std.mix(mat_color, d.vec3f(1), std.max(0, std.min(reflectivity, 1))),
+      ); // absorb the ray color based on reflectivity
+    }
+
+    acc = acc.add(sub_acc);
+  }
+
+  // averaging
+  acc = acc.div(SUB_SAMPLES);
+
+  // clipping
+  acc = std.min(acc, d.vec3f(1));
+
+  return acc;
+});
 
 const mainLayout = tgpu.bindGroupLayout({
   previousRender: { texture: 'unfilterable-float' },
@@ -194,14 +176,12 @@ const mainComputeFn = tgpu['~unstable'].computeFn({
   workgroupSize: [BlockSize, BlockSize],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
+  const preSeed = d.vec2f(input.gid.xy);
   randf.seed2(
-    std.add(
-      std.mul(d.vec2f(input.gid.xy), 0.1646936793),
-      std.mul(getRandomSeedPrimer.value, 0.934534732),
-    ),
+    preSeed.mul(0.1646936793).add(getRandomSeedPrimer.$ * 0.934534732),
   );
 
-  const prev_layers = getAccumulatedLayers.value;
+  const prev_layers = getAccumulatedLayers.$;
   const prev_render = std.textureLoad(
     mainLayout.$.previousRender,
     input.gid.xy,
@@ -211,30 +191,24 @@ const mainComputeFn = tgpu['~unstable'].computeFn({
   let acc = d.vec3f(0, 0, 0);
   for (let sx = d.u32(0); sx < SUPER_SAMPLES; sx++) {
     for (let sy = d.u32(0); sy < SUPER_SAMPLES; sy++) {
-      const offset = d.vec2f(
-        (d.f32(sx) + 0.5) * ONE_OVER_SUPER_SAMPLES,
-        (d.f32(sy) + 0.5) * ONE_OVER_SUPER_SAMPLES,
-      );
+      const offset = d.vec2f(sx, sy).add(0.5).mul(ONE_OVER_SUPER_SAMPLES);
 
-      acc = std.add(
-        acc,
-        renderSubPixel(std.add(d.vec2f(input.gid.xy), offset)),
-      );
+      acc = acc.add(renderSubPixel(d.vec2f(input.gid.xy).add(offset)));
     }
   }
 
-  acc = std.mul(acc, ONE_OVER_SUPER_SAMPLES * ONE_OVER_SUPER_SAMPLES);
+  acc = acc.mul(ONE_OVER_SUPER_SAMPLES * ONE_OVER_SUPER_SAMPLES);
 
   // applying gamma correction
   const gamma = 2.2;
-  acc = std.pow(acc, d.vec3f(d.f32(1) / gamma));
+  acc = std.pow(acc, d.vec3f(1 / gamma));
 
-  let new_render = d.vec4f(acc, 1.0);
+  let new_render = d.vec4f(acc, 1);
   if (prev_layers > 0) {
-    new_render = std.div(
-      std.add(std.mul(prev_render, prev_layers), d.vec4f(acc, 1.0)),
-      prev_layers + 1,
-    );
+    new_render = prev_render
+      .mul(prev_layers)
+      .add(d.vec4f(acc, 1.0))
+      .div(prev_layers + 1);
   }
 
   std.textureStore(mainLayout.$.mainOutput, input.gid.xy, new_render);
@@ -342,7 +316,6 @@ export function createSDFRenderer(options: SDFRendererOptions) {
 
   const mainPipeline = root['~unstable']
     // filling slots
-    .with(OutputFormat, 'rgba8unorm')
     .with(getRandomSeedPrimer, randomSeedPrimerBuffer.as('uniform'))
     .with(getAccumulatedLayers, layersBuffer.as('uniform'))
     .with(getCameraProps, camera.cameraBuffer.as('uniform'))
@@ -355,7 +328,6 @@ export function createSDFRenderer(options: SDFRendererOptions) {
 
   const auxPipeline = root['~unstable']
     // filling slots
-    .with(OutputFormat, 'rgba16float')
     .with(getCameraProps, camera.cameraBuffer.as('uniform'))
     .with(accessViewportSize, d.vec2f(auxPassSize[0], auxPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)

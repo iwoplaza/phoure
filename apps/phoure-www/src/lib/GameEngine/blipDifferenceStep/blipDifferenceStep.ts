@@ -71,7 +71,7 @@ export const BlipDifferenceStep = ({
       pipeline
         .withColorAttachment(passColorAttachment)
         .with(layout, bindGroup)
-        .draw(6);
+        .draw(3);
     },
   };
 };

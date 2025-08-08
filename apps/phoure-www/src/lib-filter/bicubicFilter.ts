@@ -21,7 +21,8 @@ const fullScreenQuadVertexFn = tgpu['~unstable']
       texelSizeY: vec2f,
       coordHG: vec2f,
     },
-  })(/* wgsl */ `{
+  })(
+    /* wgsl */ `{
     const SCREEN_RECT = array<vec2f, 6>(
       vec2f(-1.0, -1.0),
       vec2f(1.0, -1.0),
@@ -54,7 +55,8 @@ const fullScreenQuadVertexFn = tgpu['~unstable']
     output.coordHG = UVS[in.idx] * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
 
     return output;
-  }`)
+  }`,
+  )
   .$uses({ texture: layout.bound.texture });
 
 /**
@@ -71,7 +73,8 @@ const resampleCubic = tgpu['~unstable']
       coordHG: vec2f,
     },
     out: vec4f,
-  })(/* wgsl */ `{
+  })(
+    /* wgsl */ `{
     var hg_x = textureSample(hgLookup, wrappingSampler, in.coordHG.x).xyz;
     var hg_y = textureSample(hgLookup, wrappingSampler, in.coordHG.y).xyz;      // determine linear sampling coordinates
     var coord_source10 = in.uv + hg_x.x * in.texelSizeX;
@@ -87,9 +90,10 @@ const resampleCubic = tgpu['~unstable']
     tex_source00 = mix(tex_source00, tex_source01, hg_y.z);
     tex_source10 = mix(tex_source10, tex_source11, hg_y.z);      // weight along x direction
     tex_source00 = mix(tex_source00, tex_source10, hg_x.z);
-    
+
     return tex_source00;
-  }`)
+  }`,
+  )
   .$uses({
     hgLookup: layout.bound.hgLookup,
     texture: layout.bound.texture,

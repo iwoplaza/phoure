@@ -1,8 +1,9 @@
 import tgpu, { type TgpuRoot } from 'typegpu';
+import { textureLoad } from 'typegpu/std';
 import * as d from 'typegpu/data';
 
 import type { GBuffer } from '../gBuffer';
-import { fullScreenQuadVertexFn } from '../shaders/fullScreenQuad';
+import { fullScreenTriangle } from '../shaders/fullScreenQuad';
 
 type Options = {
   root: TgpuRoot;
@@ -11,30 +12,21 @@ type Options = {
   gBuffer: GBuffer;
 };
 
-const layout = tgpu
-  .bindGroupLayout({
-    sourceTexture: { texture: 'float' },
-  })
-  .$name('Post Processing - Bind Group Layout');
+const layout = tgpu.bindGroupLayout({
+  sourceTexture: { texture: 'float' },
+});
 
-const mainFragFn = tgpu['~unstable']
-  .fragmentFn({
-    in: { coord_f: d.builtin.position, uv: d.vec2f },
-    out: d.vec4f,
-  })(`{
-    var coord = vec2u(floor(in.coord_f.xy));
+const mainFragFn = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position, uv: d.vec2f },
+  out: d.vec4f,
+})((input) => {
+  const coord = d.vec2u(input.pos.xy);
+  const color = textureLoad(layout.$.sourceTexture, coord, 0);
 
-    let color = textureLoad(
-      sourceTexture,
-      coord,
-      0
-    );
+  // no post-processing for now
 
-    // no post-processing for now
-
-    return vec4f(color.rgb, 1.0);
-  }`)
-  .$uses({ sourceTexture: layout.bound.sourceTexture });
+  return d.vec4f(color.xyz, 1.0);
+});
 
 export const PostProcessingStep = ({
   root,
@@ -42,20 +34,19 @@ export const PostProcessingStep = ({
   presentationFormat,
   gBuffer,
 }: Options) => {
-  const passColorAttachment: GPURenderPassColorAttachment = {
+  const passColorAttachment = {
     // view is acquired and set in render loop.
     view: undefined as unknown as GPUTextureView,
 
-    clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-    loadOp: 'clear',
-    storeOp: 'store',
+    clearValue: [0, 0, 0, 1],
+    loadOp: 'clear' as const,
+    storeOp: 'store' as const,
   };
 
-  const pipeline = root['~unstable']
-    .withVertex(fullScreenQuadVertexFn, {})
+  const postProcessingPipeline = root['~unstable']
+    .withVertex(fullScreenTriangle, {})
     .withFragment(mainFragFn, { format: presentationFormat })
-    .createPipeline()
-    .$name('Post Processing Pipeline');
+    .createPipeline();
 
   return {
     perform() {
@@ -67,10 +58,10 @@ export const PostProcessingStep = ({
         sourceTexture: gBuffer.outRawRenderView,
       });
 
-      pipeline
+      postProcessingPipeline
         .with(layout, externalBindGroup)
         .withColorAttachment(passColorAttachment)
-        .draw(6);
+        .draw(3);
     },
   };
 };

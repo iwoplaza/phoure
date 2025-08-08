@@ -2,7 +2,7 @@ import tgpu, { type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 
 import { displayModeAtom } from 'src/lib/controlAtoms.ts';
-import { fullScreenQuadVertexFn } from 'src/lib/shaders/fullScreenQuad.ts';
+import { fullScreenTriangle } from 'src/lib/shaders/fullScreenQuad.ts';
 import { store } from 'src/lib/store.ts';
 import type { GBuffer } from '../gBuffer.ts';
 
@@ -22,7 +22,8 @@ const mainFragFn = tgpu['~unstable']
   .fragmentFn({
     in: { coord_f: d.builtin.position, uv: d.vec2f },
     out: d.vec4f,
-  })(/* wgsl */ `{
+  })(
+    /* wgsl */ `{
     let coord = vec2<i32>(floor(in.coord_f.xy));
     let channel_mode = channelMode;
 
@@ -90,7 +91,8 @@ const mainFragFn = tgpu['~unstable']
     }
 
     return result;
-  }`)
+  }`,
+  )
   .$uses({
     blurredTex: layout.bound.blurredTex,
     auxTex: layout.bound.auxTex,
@@ -115,14 +117,11 @@ export function makeGBufferDebugger(
     storeOp: 'store' as const,
   };
 
-  const channelModeUniform = root['~unstable'].createUniform(
-    d.u32,
-    CHANNEL_SPLIT,
-  );
+  const channelModeUniform = root.createUniform(d.u32, CHANNEL_SPLIT);
 
   const pipeline = root['~unstable']
     .with(channelMode, channelModeUniform)
-    .withVertex(fullScreenQuadVertexFn, {})
+    .withVertex(fullScreenTriangle, {})
     .withFragment(mainFragFn, {
       format: presentationFormat,
     })
@@ -152,7 +151,7 @@ export function makeGBufferDebugger(
       }
 
       channelModeUniform.write(channelMode);
-      pipeline.withColorAttachment(passColorAttachment).draw(6);
+      pipeline.withColorAttachment(passColorAttachment).draw(3);
     },
   };
 }

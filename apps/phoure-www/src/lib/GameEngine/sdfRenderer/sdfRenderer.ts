@@ -51,7 +51,10 @@ export const accumulatedLayersAtom = atom(0);
  * @param mat_roughness
  */
 const reflect = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)], d.vec3f)(
+  .fn(
+    [d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)],
+    d.vec3f,
+  )(
     `(rayDir, normal, matRoughness, outRoughness) {
       let slope = dot(rayDir, normal);
       let dn2 = 2. * slope;
@@ -70,7 +73,11 @@ const reflect = tgpu['~unstable']
   .$name('reflect');
 
 const renderSubPixel = tgpu['~unstable']
-  .fn([d.vec2f], d.vec3f)(/* wgsl */ `(coord: vec2f) -> vec3f {
+  .fn(
+    [d.vec2f],
+    d.vec3f,
+  )(
+    /* wgsl */ `(coord: vec2f) -> vec3f {
     // doing the first march before each sub-sample, since the first march result is the same for all of them
 
     var init_shape_ctx: ShapeContext;
@@ -95,7 +102,7 @@ const renderSubPixel = tgpu['~unstable']
     }
 
     var reflections: array<Reflection, MAX_REFL>;
-    
+
     var acc = vec3f(0., 0., 0.);
     for (var sub = 0u; sub < SUB_SAMPLES; sub++) {
       var material: Material = init_material;
@@ -158,7 +165,8 @@ const renderSubPixel = tgpu['~unstable']
     acc = min(acc, ONES_3F);
 
     return acc;
-  }`)
+  }`,
+  )
   .$uses({
     SUB_SAMPLES,
     MAX_STEPS: MarchParams.maxSteps,
@@ -182,73 +190,71 @@ const mainLayout = tgpu.bindGroupLayout({
   mainOutput: { storageTexture: 'rgba8unorm', access: 'writeonly' },
 });
 
-const mainComputeFn = tgpu['~unstable']
-  .computeFn({
-    workgroupSize: [BlockSize, BlockSize],
-    in: { gid: d.builtin.globalInvocationId },
-  })((input) => {
-    randf.seed2(
-      std.add(
-        std.mul(d.vec2f(input.gid.xy), 0.1646936793),
-        std.mul(getRandomSeedPrimer.value, 0.934534732),
-      ),
-    );
+const mainComputeFn = tgpu['~unstable'].computeFn({
+  workgroupSize: [BlockSize, BlockSize],
+  in: { gid: d.builtin.globalInvocationId },
+})((input) => {
+  randf.seed2(
+    std.add(
+      std.mul(d.vec2f(input.gid.xy), 0.1646936793),
+      std.mul(getRandomSeedPrimer.value, 0.934534732),
+    ),
+  );
 
-    const prev_layers = getAccumulatedLayers.value;
-    const prev_render = std.textureLoad(
-      mainLayout.$.previousRender,
-      input.gid.xy,
-      0,
-    );
+  const prev_layers = getAccumulatedLayers.value;
+  const prev_render = std.textureLoad(
+    mainLayout.$.previousRender,
+    input.gid.xy,
+    0,
+  );
 
-    let acc = d.vec3f(0., 0., 0.);
-    for (let sx = d.u32(0); sx < SUPER_SAMPLES; sx++) {
-      for (let sy = d.u32(0); sy < SUPER_SAMPLES; sy++) {
-        const offset = d.vec2f(
-          (d.f32(sx) + 0.5) * ONE_OVER_SUPER_SAMPLES,
-          (d.f32(sy) + 0.5) * ONE_OVER_SUPER_SAMPLES,
-        );
+  let acc = d.vec3f(0, 0, 0);
+  for (let sx = d.u32(0); sx < SUPER_SAMPLES; sx++) {
+    for (let sy = d.u32(0); sy < SUPER_SAMPLES; sy++) {
+      const offset = d.vec2f(
+        (d.f32(sx) + 0.5) * ONE_OVER_SUPER_SAMPLES,
+        (d.f32(sy) + 0.5) * ONE_OVER_SUPER_SAMPLES,
+      );
 
-        acc = std.add(
-          acc,
-          renderSubPixel(std.add(d.vec2f(input.gid.xy), offset)),
-        );
-      }
-    }
-
-    acc = std.mul(acc, ONE_OVER_SUPER_SAMPLES * ONE_OVER_SUPER_SAMPLES);
-
-    // applying gamma correction
-    const gamma = 2.2;
-    acc = std.pow(acc, d.vec3f(d.f32(1) / gamma));
-
-    let new_render = d.vec4f(acc, 1.0);
-    if (prev_layers > 0) {
-      new_render = std.div(
-        std.add(std.mul(prev_render, prev_layers), d.vec4f(acc, 1.0)),
-        prev_layers + 1,
+      acc = std.add(
+        acc,
+        renderSubPixel(std.add(d.vec2f(input.gid.xy), offset)),
       );
     }
+  }
 
-    std.textureStore(mainLayout.$.mainOutput, input.gid.xy, new_render);
-  });
+  acc = std.mul(acc, ONE_OVER_SUPER_SAMPLES * ONE_OVER_SUPER_SAMPLES);
 
-const auxLayout = tgpu
-  .bindGroupLayout({
-    auxOutput: { storageTexture: 'rgba16float' },
-  })
-  .$name('SDF Renderer: Aux Bind Group Layout');
+  // applying gamma correction
+  const gamma = 2.2;
+  acc = std.pow(acc, d.vec3f(d.f32(1) / gamma));
+
+  let new_render = d.vec4f(acc, 1.0);
+  if (prev_layers > 0) {
+    new_render = std.div(
+      std.add(std.mul(prev_render, prev_layers), d.vec4f(acc, 1.0)),
+      prev_layers + 1,
+    );
+  }
+
+  std.textureStore(mainLayout.$.mainOutput, input.gid.xy, new_render);
+});
+
+const auxLayout = tgpu.bindGroupLayout({
+  auxOutput: { storageTexture: 'rgba16float' },
+});
 
 const auxComputeFn = tgpu['~unstable']
   .computeFn({
     workgroupSize: [BlockSize, BlockSize],
     in: { gid: d.builtin.globalInvocationId },
-  })(/* wgsl */ `{
+  })(
+    /* wgsl */ `{
     let offset = vec2f(
       0.5,
       0.5,
     );
-    
+
     var march_result: MarchResult;
     var shape_ctx: ShapeContext;
     shape_ctx.rayPos = constructRayPos();
@@ -256,44 +262,45 @@ const auxComputeFn = tgpu['~unstable']
       vec2f(in.gid.xy) + offset
     );
     shape_ctx.rayDistance = 0.;
-  
+
     march(&shape_ctx, MAX_STEPS, &march_result);
-  
+
     var world_normal: vec3f;
-  
+
     if (march_result.steps >= MAX_STEPS) {
       world_normal = -shape_ctx.rayDir;
     }
     else {
       world_normal = estimateNormal(march_result.position, shape_ctx);
     }
-  
+
     var material: Material;
     worldMat(march_result.position, shape_ctx, &material);
-  
+
     let white = vec3f(1., 1., 1.);
     let mat_color = min(material.albedo, white);
-  
+
     var albedo_luminance = convertRgbToY(mat_color);
     var emission_luminance = 0.;
     if (material.emissive) {
       // albedo_luminance = 0.3;
       // emission_luminance = albedo_luminance;
     }
-  
+
     let camera = getCameraProps;
     let view_normal = camera.view_matrix * vec4f(world_normal, 0);
-  
+
     let aux = vec4(
       view_normal.xy,
       albedo_luminance,
       emission_luminance
     );
-  
+
     // TODO: maybe apply gamma correction to the albedo luminance parameter??
-  
+
     textureStore(auxOutput, in.gid.xy, aux);
-  }`)
+  }`,
+  )
   .$uses({
     MAX_STEPS: MarchParams.maxSteps,
     MarchResult,

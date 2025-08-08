@@ -1,32 +1,15 @@
 import tgpu from 'typegpu';
-import { builtin, vec2f } from 'typegpu/data';
+import { builtin, vec2f, vec4f } from 'typegpu/data';
 
-export const fullScreenQuadVertexFn = tgpu['~unstable'].vertexFn({
-  in: { idx: builtin.vertexIndex },
+export const fullScreenTriangle = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: builtin.vertexIndex },
   out: { pos: builtin.position, uv: vec2f },
-})(/* wgsl */ `{
-  const SCREEN_RECT = array<vec2f, 6>(
-    vec2f(-1.0, -1.0),
-    vec2f(1.0, -1.0),
-    vec2f(-1.0, 1.0),
+})((input) => {
+  const pos = [vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3)];
+  const uv = [vec2f(0, 0), vec2f(2, 0), vec2f(0, 2)];
 
-    vec2f(1.0, -1.0),
-    vec2f(-1.0, 1.0),
-    vec2f(1.0, 1.0),
-  );
-
-  const UVS = array<vec2f, 6>(
-    vec2f(0.0, 1.0),
-    vec2f(1.0, 1.0),
-    vec2f(0.0, 0.0),
-
-    vec2f(1.0, 1.0),
-    vec2f(0.0, 0.0),
-    vec2f(1.0, 0.0),
-  );
-
-  var output: Out;
-  output.pos = vec4f(SCREEN_RECT[in.idx], 0.0, 1.0);
-  output.uv = UVS[in.idx];
-  return output;
-}`);
+  return {
+    pos: vec4f(pos[input.vertexIndex], 0, 1),
+    uv: uv[input.vertexIndex],
+  };
+});

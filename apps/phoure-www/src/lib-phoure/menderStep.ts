@@ -12,8 +12,11 @@ import {
   outChannelsSlot,
 } from 'src/lib/GameEngine/convolve.ts';
 import type { GBuffer } from 'src/lib/gBuffer.ts';
-import { fullScreenQuadVertexFn } from 'src/lib/shaders/fullScreenQuad.ts';
-import { combinationEntryFn, combinationLayout } from './combineShader.ts';
+import { fullScreenTriangle } from 'src/lib/shaders/fullScreenQuad.ts';
+import {
+  combinationEntryFn,
+  layout as combinationLayout,
+} from './combineShader.ts';
 import { Model7 } from './model7.ts';
 import { createNetworkLayer, layerLayout } from './networkLayer.ts';
 
@@ -275,7 +278,7 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
 
   const combinationPipeline = root['~unstable']
     .with(accessViewportSize, viewportSizeUniform)
-    .withVertex(fullScreenQuadVertexFn, {})
+    .withVertex(fullScreenTriangle, {})
     .withFragment(combinationEntryFn, { format: 'rgba8unorm' })
     .createPipeline();
 
@@ -303,13 +306,12 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
       combinationPipeline
         .withColorAttachment({
           view: targetTexture(),
-
-          clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+          clearValue: [0, 0, 0, 1],
           loadOp: 'clear',
           storeOp: 'store',
         })
         .with(combinationLayout, combinationBindGroup)
-        .draw(6);
+        .draw(3);
     },
   };
 };

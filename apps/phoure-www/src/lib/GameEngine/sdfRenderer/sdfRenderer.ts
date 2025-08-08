@@ -218,77 +218,49 @@ const auxLayout = tgpu.bindGroupLayout({
   auxOutput: { storageTexture: 'rgba16float' },
 });
 
-const auxComputeFn = tgpu['~unstable']
-  .computeFn({
-    workgroupSize: [BlockSize, BlockSize],
-    in: { gid: d.builtin.globalInvocationId },
-  })(
-    /* wgsl */ `{
-    let offset = vec2f(
-      0.5,
-      0.5,
-    );
+const auxComputeFn = tgpu['~unstable'].computeFn({
+  workgroupSize: [BlockSize, BlockSize],
+  in: { gid: d.builtin.globalInvocationId },
+})((input) => {
+  const offset = d.vec2f(0.5);
 
-    var march_result: MarchResult;
-    var shape_ctx: ShapeContext;
-    shape_ctx.rayPos = constructRayPos();
-    shape_ctx.rayDir = constructRayDir(
-      vec2f(in.gid.xy) + offset
-    );
-    shape_ctx.rayDistance = 0.;
+  const march_result = MarchResult();
+  const shape_ctx = ShapeContext();
+  shape_ctx.rayPos = constructRayPos();
+  shape_ctx.rayDir = constructRayDir(d.vec2f(input.gid.xy).add(offset));
+  shape_ctx.rayDistance = 0;
 
-    march(&shape_ctx, MAX_STEPS, &march_result);
+  march(shape_ctx, MarchParams.maxSteps.$, march_result);
 
-    var world_normal: vec3f;
+  let world_normal = d.vec3f();
 
-    if (march_result.steps >= MAX_STEPS) {
-      world_normal = -shape_ctx.rayDir;
-    }
-    else {
-      world_normal = estimateNormal(march_result.position, shape_ctx);
-    }
+  if (march_result.steps >= MarchParams.maxSteps.$) {
+    world_normal = std.neg(shape_ctx.rayDir);
+  } else {
+    world_normal = estimateNormal(march_result.position, shape_ctx);
+  }
 
-    var material: Material;
-    worldMat(march_result.position, shape_ctx, &material);
+  const material = Material();
+  worldMat(march_result.position, shape_ctx, material);
 
-    let white = vec3f(1., 1., 1.);
-    let mat_color = min(material.albedo, white);
+  const mat_color = std.min(material.albedo, d.vec3f(1));
 
-    var albedo_luminance = convertRgbToY(mat_color);
-    var emission_luminance = 0.;
-    if (material.emissive) {
-      // albedo_luminance = 0.3;
-      // emission_luminance = albedo_luminance;
-    }
+  const albedo_luminance = convertRgbToY(mat_color);
+  const emission_luminance = 0;
+  if (material.emissive) {
+    // albedo_luminance = 0.3;
+    // emission_luminance = albedo_luminance;
+  }
 
-    let camera = getCameraProps;
-    let view_normal = camera.view_matrix * vec4f(world_normal, 0);
+  const camera = getCameraProps.$;
+  const view_normal = camera.view_matrix.mul(d.vec4f(world_normal, 0));
 
-    let aux = vec4(
-      view_normal.xy,
-      albedo_luminance,
-      emission_luminance
-    );
+  const aux = d.vec4f(view_normal.xy, albedo_luminance, emission_luminance);
 
-    // TODO: maybe apply gamma correction to the albedo luminance parameter??
+  // TODO: maybe apply gamma correction to the albedo luminance parameter??
 
-    textureStore(auxOutput, in.gid.xy, aux);
-  }`,
-  )
-  .$uses({
-    MAX_STEPS: MarchParams.maxSteps,
-    MarchResult,
-    ShapeContext,
-    Material,
-    constructRayPos,
-    constructRayDir,
-    march,
-    estimateNormal,
-    worldMat,
-    convertRgbToY,
-    getCameraProps,
-    auxOutput: auxLayout.bound.auxOutput,
-  });
+  std.textureStore(auxLayout.$.auxOutput, input.gid.xy, aux);
+});
 
 export interface SDFRendererOptions {
   root: TgpuRoot;
@@ -304,9 +276,9 @@ export function createSDFRenderer(options: SDFRendererOptions) {
   const LABEL = 'SDF Renderer';
   const camera = new Camera(root);
 
-  const randomSeedPrimerBuffer = root.createBuffer(d.f32).$usage('uniform');
+  const randomSeedPrimerUniform = root.createUniform(d.f32);
   // How many layers (previous renders) are stacked on top of each other to reduce noise.
-  const layersBuffer = root.createBuffer(d.f32).$usage('uniform');
+  const layersUniform = root.createUniform(d.f32);
 
   // ---
 
@@ -316,8 +288,8 @@ export function createSDFRenderer(options: SDFRendererOptions) {
 
   const mainPipeline = root['~unstable']
     // filling slots
-    .with(getRandomSeedPrimer, randomSeedPrimerBuffer.as('uniform'))
-    .with(getAccumulatedLayers, layersBuffer.as('uniform'))
+    .with(getRandomSeedPrimer, randomSeedPrimerUniform)
+    .with(getAccumulatedLayers, layersUniform)
     .with(getCameraProps, camera.cameraBuffer.as('uniform'))
     .with(accessViewportSize, d.vec2f(mainPassSize[0], mainPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
@@ -340,8 +312,8 @@ export function createSDFRenderer(options: SDFRendererOptions) {
 
   return {
     perform() {
-      randomSeedPrimerBuffer.write(Math.random());
-      layersBuffer.write(store.get(accumulatedLayersAtom));
+      randomSeedPrimerUniform.write(Math.random());
+      layersUniform.write(store.get(accumulatedLayersAtom));
       camera.update();
 
       const mainBindGroup = root.createBindGroup(mainLayout, {

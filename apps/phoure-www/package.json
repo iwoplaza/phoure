@@ -29,7 +29,7 @@
     "@typegpu/color": "workspace:*",
     "@typegpu/common": "workspace:*",
     "@typegpu/noise": "^0.1.0",
-    "@typegpu/sdf": "workspace:*",
+    "@typegpu/sdf": "^0.0.1",
     "@types/react": "^18.0.2",
     "@types/react-dom": "^18.0.2",
     "astro": "^5.7.0",

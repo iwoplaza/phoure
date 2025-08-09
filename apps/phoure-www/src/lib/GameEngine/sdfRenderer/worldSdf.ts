@@ -1,8 +1,8 @@
-import { sphere } from '@typegpu/sdf';
-import { MarchParams, ShapeContext } from 'src/lib-ray-marching';
-import tgpu, { type TgpuFnShell } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { abs, floor, min, mix, mul, pow } from 'typegpu/std';
+import { sdSphere } from '@typegpu/sdf';
+import { MarchParams, ShapeContext } from 'src/lib-ray-marching';
 
 export const Material = d.struct({
   albedo: d.vec3f,
@@ -12,14 +12,11 @@ export const Material = d.struct({
 
 // const getTime = tgpu.accessor(d.f32);
 
-const sdfShell: TgpuFnShell<[pos: d.Vec3f], d.F32> = tgpu['~unstable'].fn(
-  [d.vec3f],
-  d.f32,
-);
+const sdfShell = tgpu.fn([d.vec3f], d.f32);
 
 const objLeftBlob = sdfShell((pos) => {
   'kernel';
-  return sphere(pos, d.vec3f(-0.3, -0.2, 0), 0.2);
+  return sdSphere(pos.sub(d.vec3f(-0.3, -0.2, 0)), 0.2);
 });
 
 // ANIMATED LIGHT
@@ -29,12 +26,12 @@ const objLeftBlob = sdfShell((pos) => {
 
 const objCenterBlob = sdfShell((pos) => {
   'kernel';
-  return sphere(pos, d.vec3f(-0.3, 0.4, 0.4), 0.2);
+  return sdSphere(pos.sub(d.vec3f(-0.3, 0.4, 0.4)), 0.2);
 });
 
 const objRightBlob = sdfShell((pos) => {
   'kernel';
-  return sphere(pos, d.vec3f(0.4, 0.2, 0), 0.4);
+  return sdSphere(pos.sub(d.vec3f(0.4, 0.2, 0)), 0.4);
 });
 
 const objFloor = sdfShell((pos) => {
@@ -42,65 +39,68 @@ const objFloor = sdfShell((pos) => {
   return pos.y + 0.3;
 });
 
-const matFloor = tgpu['~unstable']
-  .fn([d.vec3f, d.ptrFn(Material)])((pos, mtr) => {
-    const uv = floor(mul(5, pos.xz));
-    const c = 0.2 + 0.5 * ((uv.x + uv.y) - 2.0 * floor((uv.x + uv.y) / 2.0));
-    
-    mtr.albedo = mix(d.vec3f(1., 1., 1.), d.vec3f(0., 0., 0.), c);
-    mtr.roughness = 0.9;
-  })
-  .$name('mat_floor');
+const matFloor = tgpu.fn([d.vec3f, d.ptrFn(Material)])((pos, mtr) => {
+  const uv = floor(mul(5, pos.xz));
+  const c = 0.2 + 0.5 * (uv.x + uv.y - 2.0 * floor((uv.x + uv.y) / 2.0));
+
+  mtr.albedo = mix(d.vec3f(1, 1, 1), d.vec3f(0, 0, 0), c);
+  mtr.roughness = 0.9;
+});
 
 export const FAR = 100;
 
 export const worldSdf = sdfShell((pos) => {
   'kernel';
-  let min_dist = d.f32(FAR);
+  let minDist = d.f32(FAR);
 
-  min_dist = min(min_dist, objLeftBlob(pos));
-  min_dist = min(min_dist, objCenterBlob(pos));
-  min_dist = min(min_dist, objRightBlob(pos));
-  min_dist = min(min_dist, objFloor(pos));
+  minDist = min(minDist, objLeftBlob(pos));
+  minDist = min(minDist, objCenterBlob(pos));
+  minDist = min(minDist, objRightBlob(pos));
+  minDist = min(minDist, objFloor(pos));
 
-  return min_dist;
+  return minDist;
 });
 
 // MATERIALS
 
-export const skyColor = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((dir) => {
-  const t = pow(min(abs(dir.y) * 4, 1.), 0.4);
+export const skyColor = tgpu.fn(
+  [d.vec3f],
+  d.vec3f,
+)((dir) => {
+  const t = pow(min(abs(dir.y) * 4, 1), 0.4);
   return mix(d.vec3f(0.7, 0.7, 0.75), d.vec3f(0.35, 0.4, 0.6), t);
 });
 
-export const worldMat = tgpu['~unstable']
-  .fn([d.vec3f, ShapeContext, d.ptrFn(Material)])((pos, ctx, out) => {
-    const sd = MarchParams.getSurfaceThreshold.value(ctx);
-    const d_left_blob = objLeftBlob(pos);
-    const d_center_blob = objCenterBlob(pos);
-    const d_right_blob = objRightBlob(pos);
-    const d_floor_blob = objFloor(pos);
+export const worldMat = tgpu.fn([d.vec3f, ShapeContext, d.ptrFn(Material)])((
+  pos,
+  ctx,
+  out,
+) => {
+  const sd = MarchParams.getSurfaceThreshold.value(ctx);
+  const d_left_blob = objLeftBlob(pos);
+  const d_center_blob = objCenterBlob(pos);
+  const d_right_blob = objRightBlob(pos);
+  const d_floor_blob = objFloor(pos);
 
-    // defaults
-    out.emissive = false;
-    out.roughness = 1;
+  // defaults
+  out.emissive = false;
+  out.roughness = 1;
 
-    if (d_left_blob <= sd) {
-      // left blob
-      out.albedo = d.vec3f(1, 0.5, 0.2);
-      out.roughness = 0.95;
-    } else if (d_center_blob <= sd) {
-      // test light
-      out.albedo = mul(20, d.vec3f(1, 1, 0.5));
-      out.emissive = true;
-    } else if (d_right_blob <= sd) {
-      out.albedo = mul(0.9, d.vec3f(0.5, 0.5, 0.6));
-      out.roughness = 0.1;
-    } else if (d_floor_blob <= sd) {
-      matFloor(pos, out);
-    } else {
-      // out.albedo = vec3f(0.5, 0.5, 0.2);
-      out.albedo = skyColor(ctx.rayDir);
-    }
-  })
-  .$name('world_mat');
+  if (d_left_blob <= sd) {
+    // left blob
+    out.albedo = d.vec3f(1, 0.5, 0.2);
+    out.roughness = 0.95;
+  } else if (d_center_blob <= sd) {
+    // test light
+    out.albedo = mul(20, d.vec3f(1, 1, 0.5));
+    out.emissive = true;
+  } else if (d_right_blob <= sd) {
+    out.albedo = mul(0.9, d.vec3f(0.5, 0.5, 0.6));
+    out.roughness = 0.1;
+  } else if (d_floor_blob <= sd) {
+    matFloor(pos, out);
+  } else {
+    // out.albedo = vec3f(0.5, 0.5, 0.2);
+    out.albedo = skyColor(ctx.rayDir);
+  }
+});

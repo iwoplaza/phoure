@@ -84,8 +84,8 @@ importers:
         specifier: ^0.1.0
         version: 0.1.0(typegpu@https://pkg.pr.new/software-mansion/TypeGPU/typegpu@c81e38bfa323506e5933b26e7e5965450c68217b)
       '@typegpu/sdf':
-        specifier: workspace:*
-        version: link:../../packages/typegpu-sdf
+        specifier: ^0.0.1
+        version: 0.0.1(typegpu@https://pkg.pr.new/software-mansion/TypeGPU/typegpu@c81e38bfa323506e5933b26e7e5965450c68217b)
       '@types/react':
         specifier: ^18.0.2
         version: 18.3.18
@@ -1479,6 +1479,12 @@ packages:
   '@typegpu/noise@0.1.0':
     resolution: {integrity: sha512-94CQfZhsszv/FEsKdhswa5yWTM0VQIuum4myNuPSDyHKyJfE86xnJPF8LvNPhmYOPkMpY2czyKFVh0CG90fEfw==}
     version: 0.1.0
+    peerDependencies:
+      typegpu: ^0.6.0
+
+  '@typegpu/sdf@0.0.1':
+    resolution: {integrity: sha512-OJKiEZs6PVq77e5P3Pxj3QwsesAkyyIXNVv3ExLZrlwTWw5nCB/ABdmB+0vixIGlNWwY1Lf1gLrrOvSNnxSOtA==}
+    version: 0.0.1
     peerDependencies:
       typegpu: ^0.6.0
 
@@ -4690,6 +4696,10 @@ snapshots:
       tslib: 2.8.1
 
   '@typegpu/noise@0.1.0(typegpu@https://pkg.pr.new/software-mansion/TypeGPU/typegpu@c81e38bfa323506e5933b26e7e5965450c68217b)':
+    dependencies:
+      typegpu: https://pkg.pr.new/software-mansion/TypeGPU/typegpu@c81e38bfa323506e5933b26e7e5965450c68217b
+
+  '@typegpu/sdf@0.0.1(typegpu@https://pkg.pr.new/software-mansion/TypeGPU/typegpu@c81e38bfa323506e5933b26e7e5965450c68217b)':
     dependencies:
       typegpu: https://pkg.pr.new/software-mansion/TypeGPU/typegpu@c81e38bfa323506e5933b26e7e5965450c68217b
 

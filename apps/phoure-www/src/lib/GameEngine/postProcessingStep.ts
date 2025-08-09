@@ -37,7 +37,6 @@ export const PostProcessingStep = ({
   const passColorAttachment = {
     // view is acquired and set in render loop.
     view: undefined as unknown as GPUTextureView,
-
     clearValue: [0, 0, 0, 1],
     loadOp: 'clear' as const,
     storeOp: 'store' as const,

@@ -1,36 +1,28 @@
 import tgpu from 'typegpu';
-import { vec3f } from 'typegpu/data';
-import { mul, normalize } from 'typegpu/std';
+import { vec2f, vec3f } from 'typegpu/data';
+import { normalize } from 'typegpu/std';
 
 import { MarchParams } from './marchSdf.ts';
-import { ShapeContext } from './types.ts';
+
+// Doing it in a derived until WGSL generation can properly decide when to `let` and when to `var`
+const epsilon = tgpu['~unstable'].derived(() =>
+  // Arbitrary - should be smaller than any surface detail in your distance function, but not so small as to get lost in float precision
+  vec2f(MarchParams.surfaceThreshold.$ * 0.5, 0),
+);
 
 /**
  * Estimates the normal vector at a point in space, based on the SDF given by `MarchParams.sampleSdf`.
  */
-export const estimateNormal = tgpu['~unstable'].fn(
-  [vec3f, ShapeContext],
+export const estimateNormal = tgpu.fn(
+  [vec3f],
   vec3f,
-)((point, ctx) => {
-  /** Arbitrary - should be smaller than any surface detail in your distance function, but not so small as to get lost in float precision */
-  const epsilon = MarchParams.getSurfaceThreshold.value(ctx) * 0.5;
-  const offX = vec3f(point.x + epsilon, point.y, point.z);
-  const offY = vec3f(point.x, point.y + epsilon, point.z);
-  const offZ = vec3f(point.x, point.y, point.z + epsilon);
-
-  const centerDistance = MarchParams.sampleSdf.value(point);
-  const xDistance = MarchParams.sampleSdf.value(offX);
-  const yDistance = MarchParams.sampleSdf.value(offY);
-  const zDistance = MarchParams.sampleSdf.value(offZ);
-
-  return normalize(
-    mul(
-      1 / epsilon,
-      vec3f(
-        xDistance - centerDistance,
-        yDistance - centerDistance,
-        zDistance - centerDistance,
-      ),
-    ),
+)((point) => {
+  const centerDistance = MarchParams.sampleSdf.$(point);
+  const distance = vec3f(
+    MarchParams.sampleSdf.$(point.add(epsilon.$.xyy)),
+    MarchParams.sampleSdf.$(point.add(epsilon.$.yxy)),
+    MarchParams.sampleSdf.$(point.add(epsilon.$.yyx)),
   );
+
+  return normalize(distance.sub(centerDistance));
 });

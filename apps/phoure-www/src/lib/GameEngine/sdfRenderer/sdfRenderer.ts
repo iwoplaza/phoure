@@ -86,10 +86,7 @@ const renderSubPixel = tgpu.fn(
     return std.min(skyColor(init_shape_ctx.rayDir), d.vec3f(1));
   }
 
-  const init_normal = estimateNormal(
-    init_march_result.position,
-    init_shape_ctx,
-  );
+  const init_normal = estimateNormal(init_march_result.position);
   const init_material = Material();
 
   worldMat(init_march_result.position, init_shape_ctx, init_material);
@@ -135,7 +132,7 @@ const renderSubPixel = tgpu.fn(
         break;
       }
 
-      normal = estimateNormal(shape_ctx.rayPos, shape_ctx);
+      normal = estimateNormal(shape_ctx.rayPos);
 
       worldMat(shape_ctx.rayPos, shape_ctx, material);
 
@@ -236,7 +233,7 @@ const auxComputeFn = tgpu['~unstable'].computeFn({
   if (marchResult.steps >= MarchParams.maxSteps.$) {
     worldNormal = std.neg(shapeCtx.rayDir);
   } else {
-    worldNormal = estimateNormal(marchResult.position, shapeCtx);
+    worldNormal = estimateNormal(marchResult.position);
   }
 
   const material = Material();

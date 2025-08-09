@@ -77,7 +77,6 @@ export const worldMat = tgpu.fn([d.vec3f, ShapeContext, d.ptrFn(Material)])((
   ctx,
   out,
 ) => {
-  const sd = MarchParams.getSurfaceThreshold.value(ctx);
   const d_left_blob = objLeftBlob(pos);
   const d_center_blob = objCenterBlob(pos);
   const d_right_blob = objRightBlob(pos);
@@ -87,21 +86,20 @@ export const worldMat = tgpu.fn([d.vec3f, ShapeContext, d.ptrFn(Material)])((
   out.emissive = false;
   out.roughness = 1;
 
-  if (d_left_blob <= sd) {
+  if (d_left_blob <= MarchParams.surfaceThreshold.$) {
     // left blob
     out.albedo = d.vec3f(1, 0.5, 0.2);
     out.roughness = 0.95;
-  } else if (d_center_blob <= sd) {
+  } else if (d_center_blob <= MarchParams.surfaceThreshold.$) {
     // test light
     out.albedo = mul(20, d.vec3f(1, 1, 0.5));
     out.emissive = true;
-  } else if (d_right_blob <= sd) {
+  } else if (d_right_blob <= MarchParams.surfaceThreshold.$) {
     out.albedo = mul(0.9, d.vec3f(0.5, 0.5, 0.6));
     out.roughness = 0.1;
-  } else if (d_floor_blob <= sd) {
+  } else if (d_floor_blob <= MarchParams.surfaceThreshold.$) {
     matFloor(pos, out);
   } else {
-    // out.albedo = vec3f(0.5, 0.5, 0.2);
     out.albedo = skyColor(ctx.rayDir);
   }
 });

@@ -3,22 +3,18 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { ShapeContext } from './types.ts';
 
-type SampleSdf = TgpuFn<[d.Vec3f], d.F32>;
-
-const defaultGetSurfaceThreshold = tgpu['~unstable'].fn([ShapeContext], d.f32)(
-  (_ctx) => 0.001,
-);
+type SampleSdf = TgpuFn<(pos: d.Vec3f) => d.F32>;
 
 export const MarchParams = {
-  maxSteps: tgpu['~unstable'].slot(500),
+  maxSteps: tgpu.slot(500),
 
   /**
    * The distance from the camera at which the sky should be drawn instead of the world.
    */
-  farPlane: tgpu['~unstable'].slot(100),
+  farPlane: tgpu.slot(100),
 
-  getSurfaceThreshold: tgpu['~unstable'].slot(defaultGetSurfaceThreshold),
-  sampleSdf: tgpu['~unstable'].slot<SampleSdf>(),
+  surfaceThreshold: tgpu.slot<number>(0.001),
+  sampleSdf: tgpu.slot<SampleSdf>(),
 };
 
 export const MarchResult = d.struct({
@@ -26,32 +22,29 @@ export const MarchResult = d.struct({
   position: d.vec3f,
 });
 
-export const march = tgpu['~unstable'].fn([
+export const march = tgpu.fn([
   d.ptrFn(ShapeContext),
   d.u32,
   d.ptrFn(MarchResult),
 ])((ctx, limit, out) => {
   let pos = d.vec3f(ctx.rayPos);
   let prev_dist = d.f32(-1);
-  let min_dist = d.f32(MarchParams.farPlane.value);
+  let min_dist = d.f32(MarchParams.farPlane.$);
 
   let step = d.u32(0);
   let progress = d.f32(0);
 
   for (; step <= limit; step++) {
     pos = std.add(ctx.rayPos, std.mul(ctx.rayDir, progress));
-    min_dist = MarchParams.sampleSdf.value(pos);
+    min_dist = MarchParams.sampleSdf.$(pos);
 
     // Inside volume?
-    if (min_dist <= 0.) {
+    if (min_dist <= 0) {
       // No need to check more objects.
       break;
     }
 
-    if (
-      min_dist < MarchParams.getSurfaceThreshold.value(ctx) &&
-      min_dist < prev_dist
-    ) {
+    if (min_dist < MarchParams.surfaceThreshold.$ && min_dist < prev_dist) {
       // No need to check more objects.
       break;
     }
@@ -60,7 +53,7 @@ export const march = tgpu['~unstable'].fn([
     progress += min_dist;
     ctx.rayDistance += min_dist;
 
-    if (progress > MarchParams.farPlane.value) {
+    if (progress > MarchParams.farPlane.$) {
       // Stop checking.
       break;
     }
@@ -71,12 +64,9 @@ export const march = tgpu['~unstable'].fn([
   out.position = pos;
 
   // Not near surface or distance rising?
-  if (
-    min_dist > MarchParams.getSurfaceThreshold.value(ctx) * 2. ||
-    min_dist > prev_dist
-  ) {
+  if (min_dist > MarchParams.surfaceThreshold.$ * 2 || min_dist > prev_dist) {
     // Sky
-    out.steps = MarchParams.maxSteps.value + 1;
+    out.steps = MarchParams.maxSteps.$ + 1;
     return;
   }
 

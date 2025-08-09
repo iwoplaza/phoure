@@ -9,7 +9,7 @@ import {
   Camera,
   constructRayDir,
   constructRayPos,
-  getCameraProps,
+  cameraPropsAccess,
 } from 'src/lib-camera';
 import {
   estimateNormal,
@@ -251,8 +251,9 @@ const auxComputeFn = tgpu['~unstable'].computeFn({
     // emissionLuminance = albedoLuminance;
   }
 
-  const camera = getCameraProps.$;
-  const viewNormal = camera.view_matrix.mul(d.vec4f(worldNormal, 0));
+  const viewNormal = cameraPropsAccess.$.view_matrix.mul(
+    d.vec4f(worldNormal, 0),
+  );
 
   const aux = d.vec4f(viewNormal.xy, albedoLuminance, emissionLuminance);
 
@@ -289,7 +290,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
     // filling slots
     .with(randomSeedPrimerAccess, randomSeedPrimerUniform)
     .with(accumulatedLayersAccess, layersUniform)
-    .with(getCameraProps, camera.cameraBuffer.as('uniform'))
+    .with(cameraPropsAccess, camera.cameraUniform)
     .with(accessViewportSize, d.vec2f(mainPassSize[0], mainPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---
@@ -299,7 +300,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
 
   const auxPipeline = root['~unstable']
     // filling slots
-    .with(getCameraProps, camera.cameraBuffer.as('uniform'))
+    .with(cameraPropsAccess, camera.cameraUniform)
     .with(accessViewportSize, d.vec2f(auxPassSize[0], auxPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---

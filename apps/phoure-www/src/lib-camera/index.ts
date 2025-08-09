@@ -3,5 +3,5 @@ export {
   CameraStruct,
   constructRayDir,
   constructRayPos,
-  getCameraProps,
+  cameraPropsAccess,
 } from './camera';

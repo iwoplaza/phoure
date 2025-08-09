@@ -10,7 +10,7 @@ export const Material = d.struct({
   emissive: d.bool,
 });
 
-// const getTime = tgpu.accessor(d.f32);
+// const timeAccess = tgpu.accessor(d.f32);
 
 const sdfShell = tgpu.fn([d.vec3f], d.f32);
 
@@ -20,9 +20,10 @@ const objLeftBlob = sdfShell((pos) => {
 });
 
 // ANIMATED LIGHT
-// const objCenterBlob = wgsl.fn`(pos: vec3f) -> f32 {
-//   return ${sdf.sphere}(pos, vec3(-0.3, 0.7 + sin(${timeUniform} * 0.001) * 0.4, -2.), 0.2);
-// }`.$name('obj_center_blob');
+// const objCenterBlob = sdfShell((pos) => {
+//   'kernel';
+//   return sdSphere(pos.sub(d.vec3f(-0.3, 0.7 + sin(timeAccess.$ * 0.001) * 0.4, -2.)), 0.2);
+// });
 
 const objCenterBlob = sdfShell((pos) => {
   'kernel';

@@ -1,9 +1,12 @@
 import { Provider } from 'jotai';
 import { HeartIcon } from 'lucide-react';
 
-import { SidebarProvider, SidebarTrigger } from 'src/components/ui/sidebar.tsx';
-import GameViewport from 'src/lib/GameEngine/GameViewport.tsx';
-import { store } from 'src/lib/store.ts';
+import {
+  SidebarProvider,
+  SidebarTrigger,
+} from '#src/components/ui/sidebar.tsx';
+import GameViewport from '#src/lib/GameEngine/GameViewport.tsx';
+import { store } from '#src/lib/store.ts';
 import { ControlsSidebar } from './ControlsSidebar.tsx';
 import { NavAside } from './NavAside.tsx';
 import { Statistics } from './Statistics.tsx';

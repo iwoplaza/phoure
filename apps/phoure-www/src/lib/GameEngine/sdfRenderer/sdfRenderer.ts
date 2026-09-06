@@ -1,7 +1,7 @@
 import { tgpu, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { convertRgbToY } from '@typegpu/color';
+import { convertRgbToY } from '#src/lib-phoure/color.ts';
 import { accessViewportSize } from '@typegpu/common';
 import { randf } from '@typegpu/noise';
 import { atom } from 'jotai';
@@ -10,16 +10,16 @@ import {
   constructRayDir,
   constructRayPos,
   cameraPropsAccess,
-} from 'src/lib-camera';
+} from '#src/lib-camera/index.ts';
 import {
   estimateNormal,
   march,
   MarchParams,
   MarchResult,
   ShapeContext,
-} from 'src/lib-ray-marching';
+} from '#src/lib-ray-marching/index.ts';
 
-import { store } from 'src/lib/store.ts';
+import { store } from '#src/lib/store.ts';
 import type { GBuffer } from '../../gBuffer.ts';
 import { Material, skyColor, worldMat, worldSdf } from './worldSdf.ts';
 

@@ -3,20 +3,20 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { useCallback, useMemo } from 'react';
 import * as React from 'react';
 
-import { Button } from 'src/components/ui/button.tsx';
-import { Input } from 'src/components/ui/input.tsx';
-import { Separator } from 'src/components/ui/separator.tsx';
-import { SettingsIcon } from 'src/components/ui/settings.tsx';
-import { Sheet, SheetContent } from 'src/components/ui/sheet.tsx';
-import { Skeleton } from 'src/components/ui/skeleton.tsx';
+import { Button } from '#src/components/ui/button.tsx';
+import { Input } from '#src/components/ui/input.tsx';
+import { Separator } from '#src/components/ui/separator.tsx';
+import { SettingsIcon } from '#src/components/ui/settings.tsx';
+import { Sheet, SheetContent } from '#src/components/ui/sheet.tsx';
+import { Skeleton } from '#src/components/ui/skeleton.tsx';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from 'src/components/ui/tooltip.tsx';
-import { useIsMobile } from 'src/hooks/use-mobile.tsx';
-import { cn } from 'src/lib/utils.ts';
+} from '#src/components/ui/tooltip.tsx';
+import { useIsMobile } from '#src/hooks/use-mobile.tsx';
+import { cn } from '#src/lib/utils.ts';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar:state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;

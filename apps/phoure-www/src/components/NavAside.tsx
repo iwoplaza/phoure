@@ -1,10 +1,10 @@
-import { CircleHelpIcon } from 'src/components/ui/circle-help.tsx';
-import { GithubIcon } from 'src/components/ui/github.tsx';
+import { CircleHelpIcon } from '#src/components/ui/circle-help.tsx';
+import { GithubIcon } from '#src/components/ui/github.tsx';
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from 'src/components/ui/hover-card.tsx';
+} from '#src/components/ui/hover-card.tsx';
 
 export function NavAside() {
   return (

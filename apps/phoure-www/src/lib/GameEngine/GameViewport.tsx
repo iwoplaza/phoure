@@ -1,7 +1,7 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useRef } from 'react';
 
-import { targetResolutionAtom } from 'src/lib/controlAtoms.ts';
+import { targetResolutionAtom } from '#src/lib/controlAtoms.ts';
 import { GameEngine } from './gameEngine.ts';
 
 function GameViewport() {

@@ -1,5 +1,5 @@
 import { accessViewportSize } from '@typegpu/common';
-import { convertRgbToY } from '@typegpu/color';
+import { convertRgbToY } from '#src/lib-phoure/color.ts';
 import { tgpu, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -10,9 +10,9 @@ import {
   inChannelsSlot,
   kernelRadiusSlot,
   outChannelsSlot,
-} from 'src/lib/GameEngine/convolve.ts';
-import type { GBuffer } from 'src/lib/gBuffer.ts';
-import { fullScreenTriangle } from 'src/lib/shaders/fullScreenQuad.ts';
+} from '#src/lib/GameEngine/convolve.ts';
+import type { GBuffer } from '#src/lib/gBuffer.ts';
+import { fullScreenTriangle } from '#src/lib/shaders/fullScreenQuad.ts';
 import {
   combinationEntryFn,
   layout as combinationLayout,

@@ -26,10 +26,10 @@
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-switch": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.6",
-    "@typegpu/color": "workspace:*",
+    "@typegpu/color": "~0.12.0",
     "@typegpu/common": "workspace:*",
     "@typegpu/noise": "^0.12.0",
-    "@typegpu/sdf": "workspace:*",
+    "@typegpu/sdf": "~0.12.0",
     "@types/react": "^18.0.2",
     "@types/react-dom": "^18.0.2",
     "astro": "^5.7.0",
@@ -53,5 +53,8 @@
   "devDependencies": {
     "@webgpu/types": "^0.1.64",
     "typescript": "npm:tsover@5.9.13"
+  },
+  "imports": {
+    "#src/*": "./src/*"
   }
 }

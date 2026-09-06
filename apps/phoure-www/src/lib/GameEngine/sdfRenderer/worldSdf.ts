@@ -1,8 +1,8 @@
 import { tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
 import { abs, floor, min, mix, mul, pow } from 'typegpu/std';
-import { sphere } from '@typegpu/sdf';
-import { MarchParams, ShapeContext } from 'src/lib-ray-marching';
+import { sdSphere } from '@typegpu/sdf';
+import { MarchParams, ShapeContext } from '#src/lib-ray-marching/index.ts';
 
 export const Material = d.struct({
   albedo: d.vec3f,
@@ -16,23 +16,23 @@ const sdfShell = tgpu.fn([d.vec3f], d.f32);
 
 const objLeftBlob = sdfShell((pos) => {
   'use gpu';
-  return sphere(pos.sub(d.vec3f(-0.3, -0.2, 0)), d.vec3f(), 0.2);
+  return sdSphere(pos.sub(d.vec3f(-0.3, -0.2, 0)), 0.2);
 });
 
 // ANIMATED LIGHT
 // const objCenterBlob = sdfShell((pos) => {
 //   'use gpu';
-//   return sphere(pos.sub(d.vec3f(-0.3, 0.7 + sin(timeAccess.$ * 0.001) * 0.4, -2.)), d.vec3f(), 0.2);
+//   return sdSphere(pos.sub(d.vec3f(-0.3, 0.7 + sin(timeAccess.$ * 0.001) * 0.4, -2.)), 0.2);
 // });
 
 const objCenterBlob = sdfShell((pos) => {
   'use gpu';
-  return sphere(pos.sub(d.vec3f(-0.3, 0.4, 0.4)), d.vec3f(), 0.2);
+  return sdSphere(pos.sub(d.vec3f(-0.3, 0.4, 0.4)), 0.2);
 });
 
 const objRightBlob = sdfShell((pos) => {
   'use gpu';
-  return sphere(pos.sub(d.vec3f(0.4, 0.2, 0)), d.vec3f(), 0.4);
+  return sdSphere(pos.sub(d.vec3f(0.4, 0.2, 0)), 0.4);
 });
 
 const objFloor = sdfShell((pos) => {

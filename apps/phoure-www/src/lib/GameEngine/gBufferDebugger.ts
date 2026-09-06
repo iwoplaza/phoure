@@ -2,9 +2,9 @@ import { tgpu, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-import { displayModeAtom } from 'src/lib/controlAtoms.ts';
-import { fullScreenTriangle } from 'src/lib/shaders/fullScreenQuad.ts';
-import { store } from 'src/lib/store.ts';
+import { displayModeAtom } from '#src/lib/controlAtoms.ts';
+import { fullScreenTriangle } from '#src/lib/shaders/fullScreenQuad.ts';
+import { store } from '#src/lib/store.ts';
 import type { GBuffer } from '../gBuffer.ts';
 
 const CHANNEL_SPLIT = 0;

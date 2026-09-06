@@ -12,8 +12,8 @@ import {
   cameraOrientationControlAtom,
   cameraYControlAtom,
   cameraZoomControlAtom,
-} from 'src/lib/controlAtoms.ts';
-import { store } from 'src/lib/store.ts';
+} from '#src/lib/controlAtoms.ts';
+import { store } from '#src/lib/store.ts';
 
 export const CameraStruct = d.struct({
   view_matrix: d.mat4x4f,

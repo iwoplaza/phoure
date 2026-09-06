@@ -4,29 +4,29 @@ import { useAtom, useSetAtom, type WritableAtom } from 'jotai';
 import { ChevronDown } from 'lucide-react';
 import { useCallback, useId } from 'react';
 
-import { Checkbox } from 'src/components/ui/checkbox';
+import { Checkbox } from '#src/components/ui/checkbox.tsx';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from 'src/components/ui/collapsible';
-import { Label } from 'src/components/ui/label';
+} from '#src/components/ui/collapsible.tsx';
+import { Label } from '#src/components/ui/label.tsx';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from 'src/components/ui/select';
+} from '#src/components/ui/select.tsx';
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-} from 'src/components/ui/sidebar';
-import { Slider } from 'src/components/ui/slider';
-import { accumulatedLayersAtom } from 'src/lib/GameEngine/sdfRenderer/sdfRenderer.ts';
+} from '#src/components/ui/sidebar.tsx';
+import { Slider } from '#src/components/ui/slider.tsx';
+import { accumulatedLayersAtom } from '#src/lib/GameEngine/sdfRenderer/sdfRenderer.ts';
 import {
   autoRotateControlAtom,
   autoRotateSpeedAtom,
@@ -40,7 +40,7 @@ import {
   fixedTimestepAtom,
   fixedTimestepEnabledAtom,
   targetResolutionAtom,
-} from 'src/lib/controlAtoms.ts';
+} from '#src/lib/controlAtoms.ts';
 import { Separator } from './ui/separator';
 
 function ControlLabel(props: { htmlFor: string; children: string }) {

@@ -1,9 +1,9 @@
 import type { SetStateAction } from 'jotai';
-import { BicubicFilter } from 'src/lib-filter';
-import { MenderStep } from 'src/lib-phoure';
+import { BicubicFilter } from '#src/lib-filter/index.ts';
+import { MenderStep } from '#src/lib-phoure/index.ts';
 import { tgpu } from 'typegpu';
 
-import { PerformanceManager } from 'src/lib/PerformanceManager.ts';
+import { PerformanceManager } from '#src/lib/PerformanceManager.ts';
 import {
   autoRotateControlAtom,
   displayModeAtom,

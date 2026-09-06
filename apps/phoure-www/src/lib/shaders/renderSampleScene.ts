@@ -1,5 +1,5 @@
 import { tgpu, d, std } from 'typegpu';
-import { convertRgbToY } from '@typegpu/color';
+import { convertRgbToY } from '#src/lib-phoure/color.ts';
 
 export const sampleSceneLayout = tgpu.bindGroupLayout({
   uniforms: {

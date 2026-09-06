@@ -1,5 +1,5 @@
 import { tgpu, d, std, type TgpuRoot } from 'typegpu';
-import { convertRgbToY } from '@typegpu/color';
+import { convertRgbToY } from '#src/lib-phoure/color.ts';
 import type { GBuffer } from '../gBuffer';
 
 const layout = tgpu.bindGroupLayout({

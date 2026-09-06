@@ -1,4 +1,5 @@
-import { rgbToYcbcrMatrix, ycbcrToRgbMatrix } from '@typegpu/color';
+import { rgbToYcbcrMatrix } from '@typegpu/color';
+import { ycbcrToRgbMatrix } from './color';
 import { accessViewportSize } from '@typegpu/common';
 import { tgpu } from 'typegpu';
 import * as std from 'typegpu/std';

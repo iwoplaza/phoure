@@ -43,7 +43,6 @@
     "typescript": "npm:tsover@5.9.13"
   },
   "peerDependencies": {
-    "@typegpu/color": "workspace:^0.0.0",
     "@typegpu/common": "workspace:^0.0.0",
     "typegpu": "^0.12.4"
   }

@@ -62,7 +62,9 @@ with Blender's Geometry Nodes. **No artist's work was used in the process**.
 The workspace uses TypeGPU 0.12.4 and unplugin-typegpu 0.12.3. Shaders are
 TypeScript functions marked with `'use gpu'`, including the convolution passes,
 bicubic filter, scene shaders, and optional edge-detection and cone-tracing
-passes. The demo uses the local SDF package.
+passes. The demo uses published `@typegpu/sdf` and `@typegpu/color` packages.
+App-specific luminance conversion and the inverse YCbCr matrix live in
+`apps/phoure-www/src/lib-phoure/color.ts`.
 
 The `typescript` dependency is an npm alias for **tsover 5.9.13**, including a
 pnpm override for build plugins. This supports vector and matrix operators while

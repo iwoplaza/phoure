@@ -1,4 +1,4 @@
-import tgpu, { type TgpuFn } from 'typegpu';
+import { tgpu, type TgpuFn } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { ShapeContext } from './types.ts';
@@ -27,7 +27,8 @@ export const march = tgpu.fn([
   d.u32,
   d.ptrFn(MarchResult),
 ])((ctx, limit, out) => {
-  let pos = d.vec3f(ctx.rayPos);
+  'use gpu';
+  let pos = d.vec3f(ctx.$.rayPos);
   let prev_dist = d.f32(-1);
   let min_dist = d.f32(MarchParams.farPlane.$);
 
@@ -35,7 +36,7 @@ export const march = tgpu.fn([
   let progress = d.f32(0);
 
   for (; step <= limit; step++) {
-    pos = std.add(ctx.rayPos, std.mul(ctx.rayDir, progress));
+    pos = std.add(ctx.$.rayPos, std.mul(ctx.$.rayDir, progress));
     min_dist = MarchParams.sampleSdf.$(pos);
 
     // Inside volume?
@@ -51,7 +52,7 @@ export const march = tgpu.fn([
 
     // march forward safely
     progress += min_dist;
-    ctx.rayDistance += min_dist;
+    ctx.$.rayDistance += min_dist;
 
     if (progress > MarchParams.farPlane.$) {
       // Stop checking.
@@ -61,14 +62,14 @@ export const march = tgpu.fn([
     prev_dist = min_dist;
   }
 
-  out.position = pos;
+  out.$.position = d.vec3f(pos);
 
   // Not near surface or distance rising?
   if (min_dist > MarchParams.surfaceThreshold.$ * 2 || min_dist > prev_dist) {
     // Sky
-    out.steps = MarchParams.maxSteps.$ + 1;
+    out.$.steps = MarchParams.maxSteps.$ + 1;
     return;
   }
 
-  out.steps = step;
+  out.$.steps = step;
 });

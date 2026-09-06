@@ -11,7 +11,14 @@
     "unicorn/no-empty-file": "warn",
     "react/set-state-in-effect": "warn",
     "react/purity": "warn",
-    "jsx-a11y/heading-has-content": "warn"
+    "jsx-a11y/heading-has-content": "warn",
+    "typegpu/no-integer-division": "warn",
+    "typegpu/no-unwrapped-objects": "error",
+    "typegpu/no-uninitialized-variables": "error",
+    "typegpu/no-math": "warn",
+    "typegpu/no-invalid-assignment": "error",
+    "typegpu/no-unsupported-syntax": "error"
   },
-  "ignorePatterns": ["**/dist/**", "**/*.d.ts"]
+  "ignorePatterns": ["**/dist/**", "**/*.d.ts"],
+  "jsPlugins": ["eslint-plugin-typegpu"]
 }

@@ -1,5 +1,6 @@
-import tgpu, { type TgpuRoot } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 import { displayModeAtom } from 'src/lib/controlAtoms.ts';
 import { fullScreenTriangle } from 'src/lib/shaders/fullScreenQuad.ts';
@@ -11,95 +12,40 @@ const CHANNEL_COLOR = 1;
 const CHANNEL_ALBEDO = 2;
 const CHANNEL_NORMAL = 3;
 
-const channelMode = tgpu['~unstable'].accessor(d.u32);
+export const channelMode = tgpu.accessor(d.u32);
 
 const layout = tgpu.bindGroupLayout({
-  blurredTex: { texture: 'unfilterable-float' },
-  auxTex: { texture: 'unfilterable-float' },
+  blurredTex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
+  auxTex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
 });
 
-const mainFragFn = tgpu['~unstable']
-  .fragmentFn({
-    in: { coord_f: d.builtin.position, uv: d.vec2f },
-    out: d.vec4f,
-  })(/* wgsl */ `{
-    let coord = vec2<i32>(floor(in.coord_f.xy));
-    let channel_mode = channelMode;
-
-    let blurred = textureLoad(
-      blurredTex,
-      coord,
-      0
-    );
-
-    let aux = textureLoad(
-      auxTex,
-      coord,
-      0
-    );
-
-    let normal = vec4(
-      (aux.x + 1.0) * 0.5, // normal.x
-      (aux.y + 1.0) * 0.5, // normal.y
-      0.5,
-      1.0,
-    );
-
-    var result: vec4<f32>;
-
-    let c = in.uv;
-    if (channel_mode == CHANNEL_SPLIT) {
-      if (c.x < 0.33) {
-        // NORMALS
-        result = normal;
-      }
-      else if (c.x < 0.66) {
-        // ALBEDO_LUMI
-
-        let albedo = aux.z;
-        result = vec4(
-          albedo,
-          albedo,
-          albedo,
-          1.0,
-        );
-      }
-      else {
-        // COLOR
-
-        result = vec4(
-          blurred.rgb,
-          1.0,
-        );
-      }
-    } else if (channel_mode == CHANNEL_COLOR) {
-      result = vec4(
-        blurred.rgb,
-        1.0,
-      );
-    } else if (channel_mode == CHANNEL_ALBEDO) {
-      let albedo = aux.z;
-      result = vec4(
-        albedo,
-        albedo,
-        albedo,
-        1.0,
-      );
-    } else if (channel_mode == CHANNEL_NORMAL) {
-      result = normal;
-    }
-
-    return result;
-  }`)
-  .$uses({
-    blurredTex: layout.bound.blurredTex,
-    auxTex: layout.bound.auxTex,
-    channelMode,
-    CHANNEL_SPLIT,
-    CHANNEL_COLOR,
-    CHANNEL_ALBEDO,
-    CHANNEL_NORMAL,
-  });
+export const mainFragFn = tgpu.fragmentFn({
+  in: { coord_f: d.builtin.position, uv: d.vec2f },
+  out: d.vec4f,
+})((input) => {
+  'use gpu';
+  const coord = d.vec2i(std.floor(input.coord_f.xy));
+  const blurred = std.textureLoad(layout.$.blurredTex, coord, 0);
+  const aux = std.textureLoad(layout.$.auxTex, coord, 0);
+  const normal = d.vec4f((aux.x + 1) * 0.5, (aux.y + 1) * 0.5, 0.5, 1);
+  const mode = channelMode.$;
+  if (
+    mode === CHANNEL_NORMAL ||
+    (mode === CHANNEL_SPLIT && input.uv.x < 0.33)
+  ) {
+    return normal;
+  }
+  if (
+    mode === CHANNEL_ALBEDO ||
+    (mode === CHANNEL_SPLIT && input.uv.x < 0.66)
+  ) {
+    return d.vec4f(aux.z, aux.z, aux.z, 1);
+  }
+  if (mode === CHANNEL_COLOR || mode === CHANNEL_SPLIT) {
+    return d.vec4f(blurred.rgb, 1);
+  }
+  return d.vec4f();
+});
 
 export function makeGBufferDebugger(
   root: TgpuRoot,
@@ -117,13 +63,15 @@ export function makeGBufferDebugger(
 
   const channelModeUniform = root.createUniform(d.u32, CHANNEL_SPLIT);
 
-  const pipeline = root['~unstable']
+  const pipeline = root
     .with(channelMode, channelModeUniform)
-    .withVertex(fullScreenTriangle, {})
-    .withFragment(mainFragFn, {
-      format: presentationFormat,
+    .createRenderPipeline({
+      vertex: fullScreenTriangle,
+      fragment: mainFragFn,
+      targets: {
+        format: presentationFormat,
+      },
     })
-    .createPipeline()
     .$name('GBuffer Debugger - pipeline')
     .with(
       layout,

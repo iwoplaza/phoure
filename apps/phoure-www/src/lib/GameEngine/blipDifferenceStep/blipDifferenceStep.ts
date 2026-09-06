@@ -1,6 +1,5 @@
-import tgpu, { type TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
-import { fullScreenQuadVertexFn } from '../../shaders/fullScreenQuad';
+import { tgpu, d, std, type TgpuRoot } from 'typegpu';
+import { fullScreenTriangle } from '../../shaders/fullScreenQuad';
 
 type Options = {
   root: TgpuRoot;
@@ -9,26 +8,21 @@ type Options = {
   textures: [() => GPUTextureView, () => GPUTextureView];
 };
 
-const fragFn = tgpu['~unstable'].fragmentFn({
+const layout = tgpu.bindGroupLayout({
+  textureA: { texture: d.texture2d(d.f32) },
+  textureB: { texture: d.texture2d(d.f32) },
+});
+
+export const differenceFragment = tgpu.fragmentFn({
   in: { coordFloat: d.builtin.position },
   out: d.vec4f,
-})(`{
-  var coord = vec2u(floor(in.coordFloat.xy));
-
-  let color_a = textureLoad(
-    texture_a,
-    coord,
-    0
-  );
-
-  let color_b = textureLoad(
-    texture_b,
-    coord,
-    0
-  );
-
-  return vec4f(abs(color_a.rgb - color_b.rgb), 1.0);
-}`);
+})((input) => {
+  'use gpu';
+  const coord = d.vec2u(input.coordFloat.xy);
+  const a = std.textureLoad(layout.$.textureA, coord, 0);
+  const b = std.textureLoad(layout.$.textureB, coord, 0);
+  return d.vec4f(std.abs(a.rgb - b.rgb), 1);
+});
 
 export const BlipDifferenceStep = ({
   root,
@@ -36,42 +30,18 @@ export const BlipDifferenceStep = ({
   presentationFormat,
   textures,
 }: Options) => {
-  const layout = tgpu
-    .bindGroupLayout({
-      textureA: { texture: 'float' },
-      textureB: { texture: 'float' },
-    })
-    .$name('Blip Difference - Bind Group Layout');
-
-  const pipeline = root['~unstable']
-    .withVertex(fullScreenQuadVertexFn, {})
-    .withFragment(fragFn, { format: presentationFormat })
-    .createPipeline();
-
-  const passColorAttachment: GPURenderPassColorAttachment = {
-    // view is acquired and set in render loop.
-    view: undefined as unknown as GPUTextureView,
-
-    clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-    loadOp: 'clear',
-    storeOp: 'store',
-  };
-
+  const pipeline = root.createRenderPipeline({
+    vertex: fullScreenTriangle,
+    fragment: differenceFragment,
+    targets: { format: presentationFormat },
+  });
   return {
     perform() {
-      // Updating color attachment
-      const textureView = context.getCurrentTexture().createView();
-      passColorAttachment.view = textureView;
-
       const bindGroup = root.createBindGroup(layout, {
         textureA: textures[0](),
         textureB: textures[1](),
       });
-
-      pipeline
-        .withColorAttachment(passColorAttachment)
-        .with(layout, bindGroup)
-        .draw(3);
+      pipeline.with(bindGroup).withColorAttachment({ view: context }).draw(3);
     },
   };
 };

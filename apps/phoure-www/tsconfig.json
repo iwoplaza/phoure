@@ -3,9 +3,10 @@
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist"],
   "compilerOptions": {
+    "lib": ["tsover", "ES2022", "DOM", "DOM.Iterable"],
+    "paths": { "src/*": ["./src/*"] },
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "baseUrl": ".",
-    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"]
+    "types": ["@webgpu/types"]
   }
 }

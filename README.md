@@ -56,3 +56,26 @@ with Blender's Geometry Nodes. **No artist's work was used in the process**.
 - Use `pnpm lint` or `pnpm format:check` to run either check independently.
 - Install the recommended Oxc VS Code extension for linting and formatting on
   save. Astro files continue to use the Astro extension for formatting.
+
+### GPU development
+
+The workspace uses TypeGPU 0.12.4 and unplugin-typegpu 0.12.3. Shaders are
+TypeScript functions marked with `'use gpu'`, including the convolution passes,
+bicubic filter, scene shaders, and optional edge-detection and cone-tracing
+passes. The demo uses the local SDF package.
+
+The `typescript` dependency is an npm alias for **tsover 5.9.13**, including a
+pnpm override for build plugins. This supports vector and matrix operators while
+remaining compatible with the existing Astro/Starlight stack. Select **Use
+Workspace Version** for TypeScript in VS Code; the existing SDK path still
+applies.
+
+- `pnpm check` includes the recommended TypeGPU shader rules through oxlint.
+- `pnpm test:types` checks every workspace with tsover.
+- `pnpm test:unit` runs math and shader-generation tests, including all three
+  neural-network layer configurations.
+- `pnpm test` builds the workspace and runs both checks.
+
+The optional cone tracer now accepts `{ root, cBuffer }`, with buffers allocated
+by `makeCBuffer(root, resolution)`. Edge detection accepts `root` in place of
+the old runtime. Both were unfinished modules using APIs removed from TypeGPU.

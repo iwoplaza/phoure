@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { f32 } from 'typegpu/data';
 
 /**
@@ -7,9 +7,12 @@ import { f32 } from 'typegpu/data';
 
  * @returns 3d sdf
  */
-export const inflate = tgpu['~unstable']
+export const inflate = tgpu
   .fn(
     [f32, f32],
     f32,
-  )((d, r) => d - r)
+  )((d, r) => {
+    'use gpu';
+    return d - r;
+  })
   .$name('op_inflate');

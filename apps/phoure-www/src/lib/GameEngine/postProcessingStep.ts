@@ -1,4 +1,4 @@
-import tgpu, { type TgpuRoot } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 import { textureLoad } from 'typegpu/std';
 import * as d from 'typegpu/data';
 
@@ -13,13 +13,14 @@ type Options = {
 };
 
 const layout = tgpu.bindGroupLayout({
-  sourceTexture: { texture: 'float' },
+  sourceTexture: { texture: d.texture2d(d.f32) },
 });
 
-const mainFragFn = tgpu['~unstable'].fragmentFn({
+export const mainFragFn = tgpu.fragmentFn({
   in: { pos: d.builtin.position, uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   const coord = d.vec2u(input.pos.xy);
   const color = textureLoad(layout.$.sourceTexture, coord, 0);
 
@@ -42,10 +43,11 @@ export const PostProcessingStep = ({
     storeOp: 'store' as const,
   };
 
-  const postProcessingPipeline = root['~unstable']
-    .withVertex(fullScreenTriangle, {})
-    .withFragment(mainFragFn, { format: presentationFormat })
-    .createPipeline();
+  const postProcessingPipeline = root.createRenderPipeline({
+    vertex: fullScreenTriangle,
+    fragment: mainFragFn,
+    targets: { format: presentationFormat },
+  });
 
   return {
     perform() {

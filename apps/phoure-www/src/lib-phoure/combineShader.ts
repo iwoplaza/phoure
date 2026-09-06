@@ -1,18 +1,19 @@
 import { rgbToYcbcrMatrix, ycbcrToRgbMatrix } from '@typegpu/color';
 import { accessViewportSize } from '@typegpu/common';
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import * as std from 'typegpu/std';
 import * as d from 'typegpu/data';
 
 export const layout = tgpu.bindGroupLayout({
-  blurredTexture: { texture: 'float' },
+  blurredTexture: { texture: d.texture2d(d.f32) },
   mendedBuffer: { storage: (n: number) => d.arrayOf(d.f32, n) },
 });
 
-export const combinationEntryFn = tgpu['~unstable'].fragmentFn({
+export const combinationEntryFn = tgpu.fragmentFn({
   in: { coord_f: d.builtin.position, uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   const coord = d.vec2u(input.coord_f.xy);
   const blurred = std.textureLoad(layout.$.blurredTexture, coord, 0);
   const blurred_ycbcr = blurred.xyz.mul(rgbToYcbcrMatrix.$);

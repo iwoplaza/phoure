@@ -1,5 +1,5 @@
 import { accessViewportSize } from '@typegpu/common';
-import tgpu, { type TgpuRoot, type TgpuUniform } from 'typegpu';
+import { tgpu, type TgpuRoot, type TgpuUniform } from 'typegpu';
 import { normalize } from 'typegpu/std';
 import * as d from 'typegpu/data';
 import { mat4, vec3 } from 'wgpu-matrix';
@@ -21,17 +21,21 @@ export const CameraStruct = d.struct({
   field_of_view: d.f32,
 });
 
-export const cameraPropsAccess = tgpu['~unstable'].accessor(CameraStruct);
+export const cameraPropsAccess = tgpu.accessor(CameraStruct);
 
 export const constructRayPos = tgpu.fn(
   [],
   d.vec3f,
-)(() => cameraPropsAccess.$.inv_view_matrix.mul(d.vec4f(0, 0, 0, 1)).xyz);
+)(() => {
+  'use gpu';
+  return cameraPropsAccess.$.inv_view_matrix.mul(d.vec4f(0, 0, 0, 1)).xyz;
+});
 
 export const constructRayDir = tgpu.fn(
   [d.vec2f],
   d.vec3f,
 )((coord) => {
+  'use gpu';
   const viewCoords = coord
     .sub(accessViewportSize.$.div(2))
     .div(accessViewportSize.$.y)

@@ -1,6 +1,6 @@
 import { accessViewportSize } from '@typegpu/common';
 import { convertRgbToY } from '@typegpu/color';
-import tgpu, { type TgpuRoot } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -31,30 +31,9 @@ type Options = {
   targetTexture: () => GPUTextureView;
 };
 
-const reluSlot = tgpu.slot<boolean>();
-const inputFromGBufferSlot = tgpu.slot<boolean>();
+export const reluSlot = tgpu.slot<boolean>();
+export const inputFromGBufferSlot = tgpu.slot<boolean>();
 const BLOCK_SIZE = 8;
-
-// const convolveLocalFn = wgsl.fn`(local: vec2u, result: ptr<function, array<f32, ${outChannelsSlot}>>) {
-//   var weight_idx: u32 = 0;
-
-//   for (var out_c: u32 = 0; out_c < ${outChannelsSlot}; out_c++) {
-//     let result_channel = &(*result)[out_c];
-
-//     for (var i: u32 = ${TILE_PADDING}-${kernelRadiusSlot}; i <= ${TILE_PADDING}+${kernelRadiusSlot}; i++) {
-//       for (var j: u32 = ${TILE_PADDING}-${kernelRadiusSlot}; j <= ${TILE_PADDING}+${kernelRadiusSlot}; j++) {
-//         let tile_slice = &(tile[local.x + i][local.y + j]);
-
-//         for (var in_c: u32 = 0; in_c < ${inChannelsSlot} / 4; in_c++) {
-//           let some = tile[local.x + i][local.y + j][in_c];
-//           (*result_channel) += dot((*tile_slice)[in_c], conv_weights[weight_idx]);
-//           // (*result_channel) = conv_weights[weight_idx].x * f32(i * j) / 10.0;
-//           weight_idx++;
-//         }
-//       }
-//     }
-//   }
-// }`;
 
 const ioLayout = tgpu.bindGroupLayout({
   output_buffer: {
@@ -62,18 +41,20 @@ const ioLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
   input_buffer: { storage: (n: number) => d.arrayOf(d.vec4f, n) },
-  blurred_tex: { texture: 'unfilterable-float' },
-  aux_tex: { texture: 'unfilterable-float' },
+  blurred_tex: {
+    texture: d.texture2d(d.f32),
+    sampleType: 'unfilterable-float',
+  },
+  aux_tex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
 });
 
-const { weights, biases } = layerLayout.bound;
-
-const sampleGlobal = tgpu['~unstable'].derived(() => {
+const sampleGlobal = tgpu.lazy(() => {
   return tgpu.fn([
     d.i32,
     d.i32,
     d.ptrFn(d.arrayOf(d.vec4f, inChannelsQuarter.$)),
   ])((x, y, result) => {
+    'use gpu';
     const canvasSize = accessViewportSize.$;
     const coord = d.vec2u(
       d.u32(std.max(0, std.min(x, d.i32(canvasSize.x) - 1))),
@@ -85,13 +66,13 @@ const sampleGlobal = tgpu['~unstable'].derived(() => {
 
       const aux = std.textureLoad(ioLayout.$.aux_tex, coord, 0);
 
-      result[0] = d.vec4f(
+      result.$[0] = d.vec4f(
         convertRgbToY(blurred.xyz),
         aux.z, // albedo luminance
         aux.x, // normal.x
         aux.y, // normal.y
       );
-      result[1] = d.vec4f(
+      result.$[1] = d.vec4f(
         aux.w, // emission luminance
         0, // zero padding
         0, // zero padding
@@ -102,7 +83,7 @@ const sampleGlobal = tgpu['~unstable'].derived(() => {
         const index =
           (coord.y * d.u32(canvasSize.x) + coord.x) * inChannelsQuarter.$ + i;
 
-        result[i] = ioLayout.$.input_buffer[index];
+        result.$[i] = d.vec4f(ioLayout.$.input_buffer[index]);
       }
     }
   });
@@ -110,58 +91,57 @@ const sampleGlobal = tgpu['~unstable'].derived(() => {
 
 const f32Array = (n: number) => d.arrayOf(d.f32, n);
 
-const applyReLU = tgpu['~unstable'].derived(() => {
+const applyReLU = tgpu.lazy(() => {
   const outChannels = outChannelsSlot.$;
 
   return tgpu.fn([d.ptrFn(f32Array(outChannels))])((result) => {
+    'use gpu';
     for (let i = 0; i < outChannels; i++) {
-      result[i] = std.max(0, result[i]);
+      result.$[i] = std.max(0, result.$[i]);
     }
   });
 });
 
-const readKernel = tgpu.fn([d.u32], d.vec4f)((idx) => weights.$[idx]);
+const readKernel = tgpu.fn(
+  [d.u32],
+  d.vec4f,
+)((idx) => {
+  'use gpu';
+  return layerLayout.$.weights[idx];
+});
 
 const menderConvolveFn = convolveFn({
   sampleFiller: sampleGlobal,
   kernelReader: readKernel,
 });
 
-const entryComputeFn = tgpu['~unstable'].computeFn({
+const ResultArray = tgpu.lazy(() => d.arrayOf(d.f32, outChannelsSlot.$));
+
+export const entryComputeFn = tgpu.computeFn({
   workgroupSize: [BLOCK_SIZE, BLOCK_SIZE],
-  in: {
-    gid: d.builtin.globalInvocationId,
-  },
-})`{
-    var result: array<f32, OUT_CHANNELS>;
-
-    for (var i = 0; i < OUT_CHANNELS; i += 1) {
-      result[i] = biases[i];
-    }
-
-    menderConvolveFn(in.gid.xy, &result);
-
-    if (reluSlot) {
-      applyReLU(&result);
-    }
-
-    let canvasSize = accessViewportSize;
-
-    let output_buffer_begin =
-      (in.gid.y * u32(canvasSize.x) +
-      in.gid.x) * OUT_CHANNELS;
-
-    for (var i: u32 = 0; i < OUT_CHANNELS; i++) {
-      output_buffer[output_buffer_begin + i] = result[i];
-    }
-  }`.$uses({
-  menderConvolveFn,
-  reluSlot,
-  applyReLU,
-  biases,
-  accessViewportSize,
-  output_buffer: ioLayout.bound.output_buffer,
-  OUT_CHANNELS: outChannelsSlot,
+  in: { gid: d.builtin.globalInvocationId },
+})((input) => {
+  'use gpu';
+  const canvasSize = accessViewportSize.$;
+  if (
+    input.gid.x >= d.u32(canvasSize.x) ||
+    input.gid.y >= d.u32(canvasSize.y)
+  ) {
+    return;
+  }
+  const result = ResultArray.$();
+  for (let i = d.u32(0); i < outChannelsSlot.$; i++) {
+    result[i] = layerLayout.$.biases[i];
+  }
+  menderConvolveFn.$(input.gid.xy, d.ref(result));
+  if (reluSlot.$) {
+    applyReLU.$(d.ref(result));
+  }
+  const outputBegin =
+    (input.gid.y * d.u32(canvasSize.x) + input.gid.x) * outChannelsSlot.$;
+  for (let i = d.u32(0); i < outChannelsSlot.$; i++) {
+    ioLayout.$.output_buffer[outputBegin + i] = result[i];
+  }
 });
 
 export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
@@ -206,7 +186,7 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
     inputFromGBuffer: boolean;
   }) => {
     return (
-      root['~unstable']
+      root
         // filling slots
         .with(kernelRadiusSlot, options.kernelRadius)
         .with(inChannelsSlot, options.inChannels)
@@ -215,8 +195,7 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
         .with(inputFromGBufferSlot, options.inputFromGBuffer)
         .with(accessViewportSize, viewportSizeUniform)
         // ---
-        .withCompute(entryComputeFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryComputeFn })
         .$name(options.label)
     );
   };
@@ -248,24 +227,23 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
     }),
   ];
 
+  // Reinterpret contiguous f32 storage as vec4f inputs (four scalars per vector).
+  // Raw buffers express this shared byte layout without an unsafe TypeScript cast.
   const ioBindGroups = [
     root.createBindGroup(ioLayout, {
       blurred_tex: gBuffer.upscaledView,
       aux_tex: gBuffer.auxView,
       output_buffer: firstWorkBuffer,
-      // oxlint-disable-next-line typescript/no-explicit-any -- its fine
-      input_buffer: secondWorkBuffer as any, // <- UNUSED
+      input_buffer: root.unwrap(secondWorkBuffer), // <- UNUSED
     }),
     root.createBindGroup(ioLayout, {
-      // oxlint-disable-next-line typescript/no-explicit-any -- its fine
-      input_buffer: firstWorkBuffer as any,
+      input_buffer: root.unwrap(firstWorkBuffer),
       output_buffer: secondWorkBuffer,
       blurred_tex: gBuffer.upscaledView, // <- UNUSED
       aux_tex: gBuffer.auxView, // <- UNUSED
     }),
     root.createBindGroup(ioLayout, {
-      // oxlint-disable-next-line typescript/no-explicit-any -- its fine
-      input_buffer: secondWorkBuffer as any,
+      input_buffer: root.unwrap(secondWorkBuffer),
       output_buffer: mendedResultBuffer,
       blurred_tex: gBuffer.upscaledView, // <- UNUSED
       aux_tex: gBuffer.auxView, // <- UNUSED
@@ -276,11 +254,13 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
   // Combination pass
   // ---
 
-  const combinationPipeline = root['~unstable']
+  const combinationPipeline = root
     .with(accessViewportSize, viewportSizeUniform)
-    .withVertex(fullScreenTriangle, {})
-    .withFragment(combinationEntryFn, { format: 'rgba8unorm' })
-    .createPipeline();
+    .createRenderPipeline({
+      vertex: fullScreenTriangle,
+      fragment: combinationEntryFn,
+      targets: { format: 'rgba8unorm' },
+    });
 
   const combinationBindGroup = root.createBindGroup(combinationLayout, {
     blurredTexture: gBuffer.upscaledView,

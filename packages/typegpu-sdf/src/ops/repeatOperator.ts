@@ -1,21 +1,22 @@
-import tgpu from 'typegpu';
-import { vec2f, vec3f } from 'typegpu/data';
+import { tgpu, d, std } from 'typegpu';
 
-export const repeatXYZ = tgpu['~unstable']
+export const repeatXYZ = tgpu
   .fn(
-    [vec3f, vec3f],
-    vec3f,
-  )(`(pos: vec3f, tile_size: vec3f) -> vec3f {
-    return round(pos / tile_size) * tile_size;
-  }`)
+    [d.vec3f, d.vec3f],
+    d.vec3f,
+  )((pos, tileSize) => {
+    'use gpu';
+    return std.round(pos / tileSize) * tileSize;
+  })
   .$name('op_repeat_xyz');
 
-export const repeatXZ = tgpu['~unstable']
+export const repeatXZ = tgpu
   .fn(
-    [vec3f, vec2f],
-    vec3f,
-  )(`(pos: vec3f, tile_size: vec2f) -> vec3f {
-    let chunk_pos = round(pos.xz / tile_size) * tile_size;
-    return vec3f(chunk_pos.x, 0, chunk_pos.y);
-  }`)
+    [d.vec3f, d.vec2f],
+    d.vec3f,
+  )((pos, tileSize) => {
+    'use gpu';
+    const chunk = std.round(pos.xz / tileSize) * tileSize;
+    return d.vec3f(chunk.x, 0, chunk.y);
+  })
   .$name('op_repeat_xz');

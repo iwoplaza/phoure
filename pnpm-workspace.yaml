@@ -4,5 +4,5 @@ packages:
 
 # Define a catalog of version ranges.
 catalog:
-  typegpu: https://pkg.pr.new/software-mansion/TypeGPU/typegpu@e598b31a3d03476d47bd66002e80dfacb54d8203
-  unplugin-typegpu: ^0.2.2
+  typegpu: ~0.12.4
+  unplugin-typegpu: ~0.12.3

@@ -1,4 +1,4 @@
-import tgpu, { type TgpuRoot } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { convertRgbToY } from '@typegpu/color';
@@ -31,8 +31,8 @@ const ONE_OVER_SUPER_SAMPLES = 1 / SUPER_SAMPLES;
 const SUB_SAMPLES = 16;
 const MAX_REFL = 3;
 
-const randomSeedPrimerAccess = tgpu['~unstable'].accessor(d.f32);
-const accumulatedLayersAccess = tgpu['~unstable'].accessor(d.f32);
+export const randomSeedPrimerAccess = tgpu.accessor(d.f32);
+export const accumulatedLayersAccess = tgpu.accessor(d.f32);
 
 const Reflection = d.struct({
   color: d.vec3f,
@@ -52,16 +52,14 @@ export const accumulatedLayersAtom = atom(0);
 const reflect = tgpu.fn(
   [d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)],
   d.vec3f,
-  // oxlint-disable-next-line no-unused-vars -- This parameter is a WGSL output pointer.
 )((rayDir, normal, matRoughness, outRoughness) => {
+  'use gpu';
   const slope = std.dot(rayDir, normal);
   const refl_dir = rayDir.sub(normal.mul(2 * slope));
 
   const fresnel = 1 - std.pow(1 + slope, 16);
   const roughness = matRoughness * fresnel;
-  // TODO: Fix when boxed values are introduced
-  // oxlint-disable-next-line no-param-reassign -- Has to be done like this for now
-  outRoughness = roughness;
+  outRoughness.$ = roughness;
 
   let new_ray_dir = randf.onHemisphere(normal);
   new_ray_dir = std.mix(refl_dir, new_ray_dir, roughness);
@@ -72,6 +70,7 @@ const renderSubPixel = tgpu.fn(
   [d.vec2f],
   d.vec3f,
 )((coord) => {
+  'use gpu';
   // doing the first march before each sub-sample, since the first march result is the same for all of them
 
   const init_shape_ctx = ShapeContext({
@@ -81,7 +80,11 @@ const renderSubPixel = tgpu.fn(
   });
   const init_march_result = MarchResult();
 
-  march(init_shape_ctx, MarchParams.maxSteps.$, init_march_result);
+  march(
+    d.ref(init_shape_ctx),
+    MarchParams.maxSteps.$,
+    d.ref(init_march_result),
+  );
 
   if (init_march_result.steps >= MarchParams.maxSteps.$) {
     return std.min(skyColor(init_shape_ctx.rayDir), d.vec3f(1));
@@ -90,7 +93,7 @@ const renderSubPixel = tgpu.fn(
   const init_normal = estimateNormal(init_march_result.position);
   const init_material = Material();
 
-  worldMat(init_march_result.position, init_shape_ctx, init_material);
+  worldMat(init_march_result.position, init_shape_ctx, d.ref(init_material));
 
   if (init_material.emissive) {
     return std.min(init_material.albedo, d.vec3f(1));
@@ -113,20 +116,20 @@ const renderSubPixel = tgpu.fn(
     });
 
     for (let refl = d.u32(0); refl < MAX_REFL; refl++) {
-      const roughness = d.f32(0);
+      const roughness = d.ref(d.f32(0));
       shape_ctx.rayDir = reflect(
         shape_ctx.rayDir,
         normal,
         material.roughness,
         roughness,
       );
-      reflections[refl_count].color = material.albedo;
-      reflections[refl_count].roughness = roughness;
+      reflections[refl_count].color = d.vec3f(material.albedo);
+      reflections[refl_count].roughness = roughness.$;
       refl_count++;
 
       const march_result = MarchResult();
-      march(shape_ctx, MarchParams.maxSteps.$, march_result);
-      shape_ctx.rayPos = march_result.position;
+      march(d.ref(shape_ctx), MarchParams.maxSteps.$, d.ref(march_result));
+      shape_ctx.rayPos = d.vec3f(march_result.position);
 
       if (march_result.steps >= MarchParams.maxSteps.$) {
         emissive_color = skyColor(shape_ctx.rayDir);
@@ -135,10 +138,10 @@ const renderSubPixel = tgpu.fn(
 
       normal = estimateNormal(shape_ctx.rayPos);
 
-      worldMat(shape_ctx.rayPos, shape_ctx, material);
+      worldMat(shape_ctx.rayPos, shape_ctx, d.ref(material));
 
       if (material.emissive) {
-        emissive_color = material.albedo;
+        emissive_color = d.vec3f(material.albedo);
         break;
       }
     }
@@ -166,14 +169,25 @@ const renderSubPixel = tgpu.fn(
 });
 
 const mainLayout = tgpu.bindGroupLayout({
-  previousRender: { texture: 'unfilterable-float' },
-  mainOutput: { storageTexture: 'rgba8unorm', access: 'writeonly' },
+  previousRender: {
+    texture: d.texture2d(d.f32),
+    sampleType: 'unfilterable-float',
+  },
+  mainOutput: {
+    storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
+  },
 });
 
-const mainComputeFn = tgpu['~unstable'].computeFn({
+export const mainComputeFn = tgpu.computeFn({
   workgroupSize: [BlockSize, BlockSize],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
+  'use gpu';
+  if (
+    input.gid.x >= d.u32(accessViewportSize.$.x) ||
+    input.gid.y >= d.u32(accessViewportSize.$.y)
+  )
+    return;
   const preSeed = d.vec2f(input.gid.xy);
   randf.seed2(
     preSeed.mul(0.1646936793).add(randomSeedPrimerAccess.$ * 0.934534732),
@@ -213,13 +227,21 @@ const mainComputeFn = tgpu['~unstable'].computeFn({
 });
 
 const auxLayout = tgpu.bindGroupLayout({
-  auxOutput: { storageTexture: 'rgba16float' },
+  auxOutput: {
+    storageTexture: d.textureStorage2d('rgba16float', 'write-only'),
+  },
 });
 
-const auxComputeFn = tgpu['~unstable'].computeFn({
+export const auxComputeFn = tgpu.computeFn({
   workgroupSize: [BlockSize, BlockSize],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
+  'use gpu';
+  if (
+    input.gid.x >= d.u32(accessViewportSize.$.x) ||
+    input.gid.y >= d.u32(accessViewportSize.$.y)
+  )
+    return;
   const marchResult = MarchResult();
   const shapeCtx = ShapeContext({
     rayPos: constructRayPos(),
@@ -227,7 +249,7 @@ const auxComputeFn = tgpu['~unstable'].computeFn({
     rayDistance: 0,
   });
 
-  march(shapeCtx, MarchParams.maxSteps.$, marchResult);
+  march(d.ref(shapeCtx), MarchParams.maxSteps.$, d.ref(marchResult));
 
   let worldNormal = d.vec3f();
 
@@ -238,7 +260,7 @@ const auxComputeFn = tgpu['~unstable'].computeFn({
   }
 
   const material = Material();
-  worldMat(marchResult.position, shapeCtx, material);
+  worldMat(marchResult.position, shapeCtx, d.ref(material));
 
   const matColor = std.min(material.albedo, d.vec3f(1));
 
@@ -284,7 +306,7 @@ export function createSDFRenderer(options: SDFRendererOptions) {
     auxOutput: gBuffer.auxView,
   });
 
-  const mainPipeline = root['~unstable']
+  const mainPipeline = root
     // filling slots
     .with(randomSeedPrimerAccess, randomSeedPrimerUniform)
     .with(accumulatedLayersAccess, layersUniform)
@@ -292,18 +314,16 @@ export function createSDFRenderer(options: SDFRendererOptions) {
     .with(accessViewportSize, d.vec2f(mainPassSize[0], mainPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---
-    .withCompute(mainComputeFn)
-    .createPipeline()
+    .createComputePipeline({ compute: mainComputeFn })
     .$name(`${LABEL} - main pipeline`);
 
-  const auxPipeline = root['~unstable']
+  const auxPipeline = root
     // filling slots
     .with(cameraPropsAccess, camera.cameraUniform)
     .with(accessViewportSize, d.vec2f(auxPassSize[0], auxPassSize[1]))
     .with(MarchParams.sampleSdf, worldSdf)
     // ---
-    .withCompute(auxComputeFn)
-    .createPipeline()
+    .createComputePipeline({ compute: auxComputeFn })
     .$name(`${LABEL} - aux pipeline`)
     //
     .with(auxLayout, auxBindGroup);

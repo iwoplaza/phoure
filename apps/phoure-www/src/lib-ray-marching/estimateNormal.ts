@@ -1,11 +1,11 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { vec2f, vec3f } from 'typegpu/data';
 import { normalize } from 'typegpu/std';
 
 import { MarchParams } from './marchSdf.ts';
 
 // Doing it in a derived until WGSL generation can properly decide when to `let` and when to `var`
-const epsilon = tgpu['~unstable'].derived(() =>
+const epsilon = tgpu.lazy(() =>
   // Arbitrary - should be smaller than any surface detail in your distance function, but not so small as to get lost in float precision
   vec2f(MarchParams.surfaceThreshold.$ * 0.5, 0),
 );
@@ -17,6 +17,7 @@ export const estimateNormal = tgpu.fn(
   [vec3f],
   vec3f,
 )((point) => {
+  'use gpu';
   const centerDistance = MarchParams.sampleSdf.$(point);
   const distance = vec3f(
     MarchParams.sampleSdf.$(point.add(epsilon.$.xyy)),

@@ -9,7 +9,8 @@ import typegpu from 'unplugin-typegpu/vite';
 export default defineConfig({
   base: 'phoure',
   vite: {
-    plugins: [typegpu({ include: [/\.ts$/] })],
+    plugins: [typegpu()],
+    resolve: { alias: { src: new URL('./src', import.meta.url).pathname } },
   },
   redirects: {
     '/': {

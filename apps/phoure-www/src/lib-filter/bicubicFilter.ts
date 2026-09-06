@@ -1,101 +1,105 @@
-import tgpu, { type TgpuRoot } from 'typegpu';
-import { builtin, vec2f, vec4f } from 'typegpu/data';
+import { tgpu, d, std, type TgpuRoot } from 'typegpu';
 
-const layout = tgpu
-  .bindGroupLayout({
-    wrappingSampler: { sampler: 'filtering' },
-    clampingSampler: { sampler: 'filtering' },
-    texture: { texture: 'float' },
-    // filter offsets and weights
-    hgLookup: { texture: 'float', viewDimension: '1d' },
-  })
-  .$name('Resample - external bind group layout');
+const layout = tgpu.bindGroupLayout({
+  wrappingSampler: { sampler: 'filtering' },
+  clampingSampler: { sampler: 'filtering' },
+  texture: { texture: d.texture2d(d.f32) },
+  hgLookup: { texture: d.texture1d(d.f32) },
+});
 
-const fullScreenQuadVertexFn = tgpu['~unstable']
-  .vertexFn({
-    in: { idx: builtin.vertexIndex },
-    out: {
-      pos: builtin.position,
-      uv: vec2f,
-      texelSizeX: vec2f,
-      texelSizeY: vec2f,
-      coordHG: vec2f,
-    },
-  })(/* wgsl */ `{
-    const SCREEN_RECT = array<vec2f, 6>(
-      vec2f(-1.0, -1.0),
-      vec2f(1.0, -1.0),
-      vec2f(-1.0, 1.0),
+export const fullScreenQuadVertexFn = tgpu.vertexFn({
+  in: { idx: d.builtin.vertexIndex },
+  out: {
+    pos: d.builtin.position,
+    uv: d.vec2f,
+    texelSizeX: d.vec2f,
+    texelSizeY: d.vec2f,
+    coordHG: d.vec2f,
+  },
+})((input) => {
+  'use gpu';
+  const positions = d.arrayOf(
+    d.vec2f,
+    6,
+  )([
+    d.vec2f(-1, -1),
+    d.vec2f(1, -1),
+    d.vec2f(-1, 1),
+    d.vec2f(1, -1),
+    d.vec2f(-1, 1),
+    d.vec2f(1, 1),
+  ]);
+  const uvs = d.arrayOf(
+    d.vec2f,
+    6,
+  )([
+    d.vec2f(0, 1),
+    d.vec2f(1, 1),
+    d.vec2f(0, 0),
+    d.vec2f(1, 1),
+    d.vec2f(0, 0),
+    d.vec2f(1, 0),
+  ]);
+  const viewportSize = d.vec2f(std.textureDimensions(layout.$.texture));
+  return {
+    pos: d.vec4f(positions[input.idx], 0, 1),
+    uv: uvs[input.idx],
+    texelSizeX: d.vec2f(1 / viewportSize.x, 0),
+    texelSizeY: d.vec2f(0, 1 / viewportSize.y),
+    coordHG: uvs[input.idx] * viewportSize - d.vec2f(0.5),
+  };
+});
 
-      vec2f(1.0, -1.0),
-      vec2f(-1.0, 1.0),
-      vec2f(1.0, 1.0),
-    );
-
-    const UVS = array<vec2f, 6>(
-      vec2f(0.0, 1.0),
-      vec2f(1.0, 1.0),
-      vec2f(0.0, 0.0),
-
-      vec2f(1.0, 1.0),
-      vec2f(0.0, 0.0),
-      vec2f(1.0, 0.0),
-    );
-
-    let viewport_size = vec2f(textureDimensions(texture));
-
-    var output: Out;
-    output.pos = vec4f(SCREEN_RECT[in.idx], 0.0, 1.0);
-    output.uv = UVS[in.idx];
-    output.texelSizeX = vec2f(1. / f32(viewport_size.x), 0);
-    output.texelSizeY = vec2f(0, 1. / f32(viewport_size.y));
-
-    // calc filter texture coordinates where [0,1] is a single texel
-    output.coordHG = UVS[in.idx] * viewport_size - vec2f(0.5f, 0.5f);      // fetch offsets and weights from filter texture
-
-    return output;
-  }`)
-  .$uses({ texture: layout.bound.texture });
-
-/**
- * Implementation based on:
- * https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-20-fast-third-order-texture-filtering
- */
-const resampleCubic = tgpu['~unstable']
-  .fragmentFn({
-    in: {
-      pos: builtin.position,
-      uv: vec2f,
-      texelSizeX: vec2f,
-      texelSizeY: vec2f,
-      coordHG: vec2f,
-    },
-    out: vec4f,
-  })(/* wgsl */ `{
-    var hg_x = textureSample(hgLookup, wrappingSampler, in.coordHG.x).xyz;
-    var hg_y = textureSample(hgLookup, wrappingSampler, in.coordHG.y).xyz;      // determine linear sampling coordinates
-    var coord_source10 = in.uv + hg_x.x * in.texelSizeX;
-    var coord_source00 = in.uv - hg_x.y * in.texelSizeX;
-    var coord_source11 = coord_source10 + hg_y.x * in.texelSizeY;
-    var coord_source01 = coord_source00 + hg_y.x * in.texelSizeY;
-    coord_source10 = coord_source10 - hg_y.y * in.texelSizeY;
-    coord_source00 = coord_source00 - hg_y.y * in.texelSizeY;      // fetch four linearly interpolated inputs
-    var tex_source00 = textureSample(texture, clampingSampler, coord_source00);
-    var tex_source10 = textureSample(texture, clampingSampler, coord_source10);
-    var tex_source01 = textureSample(texture, clampingSampler, coord_source01);
-    var tex_source11 = textureSample(texture, clampingSampler, coord_source11);      // weight along y direction
-    tex_source00 = mix(tex_source00, tex_source01, hg_y.z);
-    tex_source10 = mix(tex_source10, tex_source11, hg_y.z);      // weight along x direction
-    tex_source00 = mix(tex_source00, tex_source10, hg_x.z);
-
-    return tex_source00;
-  }`)
-  .$uses({
-    hgLookup: layout.bound.hgLookup,
-    texture: layout.bound.texture,
-    wrappingSampler: layout.bound.wrappingSampler,
-    clampingSampler: layout.bound.clampingSampler,
-  });
+/** Fast third-order filtering, GPU Gems 2, chapter 20. */
+export const resampleCubic = tgpu.fragmentFn({
+  in: {
+    pos: d.builtin.position,
+    uv: d.vec2f,
+    texelSizeX: d.vec2f,
+    texelSizeY: d.vec2f,
+    coordHG: d.vec2f,
+  },
+  out: d.vec4f,
+})((input) => {
+  'use gpu';
+  const hx = std.textureSample(
+    layout.$.hgLookup,
+    layout.$.wrappingSampler,
+    input.coordHG.x,
+  ).xyz;
+  const hy = std.textureSample(
+    layout.$.hgLookup,
+    layout.$.wrappingSampler,
+    input.coordHG.y,
+  ).xyz;
+  const right = input.uv + hx.x * input.texelSizeX;
+  const left = input.uv - hx.y * input.texelSizeX;
+  const c00 = left - hy.y * input.texelSizeY;
+  const c10 = right - hy.y * input.texelSizeY;
+  const c01 = left + hy.x * input.texelSizeY;
+  const c11 = right + hy.x * input.texelSizeY;
+  const t00 = std.textureSample(
+    layout.$.texture,
+    layout.$.clampingSampler,
+    c00,
+  );
+  const t10 = std.textureSample(
+    layout.$.texture,
+    layout.$.clampingSampler,
+    c10,
+  );
+  const t01 = std.textureSample(
+    layout.$.texture,
+    layout.$.clampingSampler,
+    c01,
+  );
+  const t11 = std.textureSample(
+    layout.$.texture,
+    layout.$.clampingSampler,
+    c11,
+  );
+  return std.mix(std.mix(t00, t01, hy.z), std.mix(t10, t11, hy.z), hx.z);
+});
 
 /**
  * Lookup texture of `h` and `g` functions defined in https://developer.nvidia.com/gpugems/gpugems2/part-iii-high-quality-rendering/chapter-20-fast-third-order-texture-filtering.
@@ -177,18 +181,20 @@ export const BicubicFilter = ({
     addressModeW: 'clamp-to-edge',
   });
 
-  const pipeline = root['~unstable']
-    .withVertex(fullScreenQuadVertexFn, {})
-    .withFragment(resampleCubic, { format: targetFormat })
-    .createPipeline()
+  const pipeline = root
+    .createRenderPipeline({
+      vertex: fullScreenQuadVertexFn,
+      fragment: resampleCubic,
+      targets: { format: targetFormat },
+    })
     .$name('Resample (cubic) Pipeline');
 
-  const passColorAttachment: GPURenderPassColorAttachment = {
+  const passColorAttachment = {
     view: targetTexture,
 
     clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-    loadOp: 'clear',
-    storeOp: 'store',
+    loadOp: 'clear' as const,
+    storeOp: 'store' as const,
   };
 
   const hgLookupView = hgLookupTexture.createView();

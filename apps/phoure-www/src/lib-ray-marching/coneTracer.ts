@@ -1,315 +1,96 @@
-// @ts-nocheck: Not finished yet
-
+import { tgpu, d, std, type TgpuRoot } from 'typegpu';
+import { accessViewportSize } from '@typegpu/common';
 import {
-  builtin,
-  type TypeGpuRuntime,
-  wgsl,
-  type WgslBuffer,
-  type WgslPlum,
-} from 'typegpu';
-import {
-  arrayOf,
-  type F32,
-  f32,
-  vec2f,
-  vec2u,
-  type WgslArray,
-} from 'typegpu/data';
+  constructRayDir,
+  constructRayPos,
+  cameraPropsAccess,
+  Camera,
+} from '../lib-camera';
+import { worldSdf } from '../lib/GameEngine/sdfRenderer/worldSdf';
+import { MarchParams } from './marchSdf';
 
-import { roundUp } from '../mathUtils.ts';
-import { constructRayDir, constructRayPos } from './camera.ts';
-import { MarchResult } from './marchSdf.ts';
-import worldSdf, { FAR, ShapeContext } from './worldSdf.ts';
+const layout = tgpu.bindGroupLayout({
+  previous: { storage: d.arrayOf(d.f32) },
+  output: { storage: d.arrayOf(d.f32), access: 'mutable' },
+});
+export const firstStep = tgpu.slot(false);
+export const previousSize = tgpu.accessor(d.vec2u);
 
-const BlockSize = 8;
-
-const coneMinDistVar = wgsl.var(f32, 0);
-
-const coneDist = wgsl.fn`(ctx: ${ShapeContext} -> f32 {
-  return ${coneMinDistVar} * ctx.rayDistance;
-}`.$name('cone_dist');
-
-const marchWithCone = wgsl.fn`(ctx: ptr<function, ShapeContext>, limit: u32) {
-  let dir = (*ctx).ray_dir;
-  let start_pos = (*ctx).rayPos;
-  
-  for (var step = 0u; step <= limit; step++) {
-    if ((*ctx).rayDistance >= ${FAR}) {
-      // Stop checking.
-      return;
-    }
-
-    let min_dist = ${worldSdf}(start_pos + (*ctx).rayDistance * dir);
-
-    // March forward
-    (*ctx).rayDistance += min_dist;
-
-    // Crossed threshold?
-    if (min_dist <= ${coneDist}(*ctx)) {
-      // Stop checking.
-      (*ctx).rayDistance -= min_dist; // going back
-      return;
-    }
+/** Conservative coarse-to-fine ray distances; this optional pass is not used by the demo. */
+export const coneCompute = tgpu.computeFn({
+  workgroupSize: [8, 8],
+  in: { gid: d.builtin.globalInvocationId },
+})((input) => {
+  'use gpu';
+  const size = d.vec2u(accessViewportSize.$);
+  if (input.gid.x >= size.x || input.gid.y >= size.y) return;
+  const origin = constructRayPos();
+  const direction = constructRayDir(d.vec2f(input.gid.xy) + d.vec2f(0.5));
+  const coneSlope = Math.SQRT2 / accessViewportSize.$.y;
+  let distance = d.f32(0);
+  if (!firstStep.$) {
+    const coord = std.min(
+      d.vec2u(d.vec2f(input.gid.xy) / 2),
+      previousSize.$ - d.vec2u(1),
+    );
+    distance = layout.$.previous[coord.y * previousSize.$.x + coord.x];
   }
-}`.$name('march_with_cone');
+  for (let step = d.u32(0); step <= MarchParams.maxSteps.$; step++) {
+    if (distance >= MarchParams.farPlane.$) break;
+    const minimum = worldSdf(origin + distance * direction);
+    if (minimum <= coneSlope * distance) break;
+    distance += minimum;
+  }
+  layout.$.output[input.gid.y * size.x + input.gid.x] = distance;
+});
 
-const inputBufferSizePlaceholder = wgsl.slot().$name('input_buffer_size');
-const outputBufferSizePlaceholder = wgsl.slot().$name('output_buffer_size');
-const isFirstStep = wgsl.slot().$name('is_first_step');
-const inputBufferPlaceholder = wgsl.slot().$name('input_buffer');
-const outputBufferSlot = wgsl.slot().$name('output_buffer');
-
-const renderTargetSizeSlot = wgsl.slot().$name('render_target_size');
-
-const depth16SizeBuffer = wgsl.buffer(vec2u).$allowUniform();
-const depth8SizeBuffer = wgsl.buffer(vec2u).$allowUniform();
-const depth4SizeBuffer = wgsl.buffer(vec2u).$allowUniform();
-const depth2SizeBuffer = wgsl.buffer(vec2u).$allowUniform();
-// can be fractional, as this is the divided resolution without any padding
-const resolution16Buffer = wgsl.buffer(vec2f).$allowUniform();
-const resolution8Buffer = wgsl.buffer(vec2f).$allowUniform();
-const resolution4Buffer = wgsl.buffer(vec2f).$allowUniform();
-const resolution2Buffer = wgsl.buffer(vec2f).$allowUniform();
-
-// const MAX_STEPS = 100;
-
-const mainComputeFn = wgsl.fn`(GlobalInvocationID: vec3u) {
-  let offset = vec2f(
-    0.5,
-    0.5
+export function makeCBuffer(root: TgpuRoot, resolution: [number, number]) {
+  const sizes = [16, 8, 4, 2].map(
+    (scale) =>
+      [Math.ceil(resolution[0] / scale), Math.ceil(resolution[1] / scale)] as [
+        number,
+        number,
+      ],
   );
-
-  var march_result: ${MarchResult};
-  var shape_ctx: ${ShapeContext};
-  shape_ctx.rayPos = ${constructRayPos}();
-  shape_ctx.rayDir = ${constructRayDir}(vec2f(GlobalInvocationID.xy) + offset);
-  shape_ctx.rayDistance = 0.;
-
-  // TODO: A very primitive estimation, change for a better approx if needed.
-  ${coneMinDistVar} = ${Math.SQRT2} / ${renderTargetSizeSlot}.y;
-
-  if (!${isFirstStep}) {
-    // Advancing based on the previous step
-
-    let prev_idx = u32(GlobalInvocationID.x / 2) + u32(GlobalInvocationID.y / 2 * ${inputBufferSizePlaceholder}.x);
-    let prev_dist = ${inputBufferPlaceholder}[prev_idx];
-    shape_ctx.rayDistance = prev_dist;
-  }
-  
-  ${marchWithCone}(&shape_ctx, MAX_STEPS);
-
-  let buffer_offset = GlobalInvocationID.x + GlobalInvocationID.y * ${outputBufferSizePlaceholder}.x;
-  ${outputBufferSlot}[buffer_offset] = shape_ctx.rayDistance;
-}`.$name('main_compute_fn');
-
-export interface CBuffer {
-  readonly modulo: number;
-
-  depth16BufferPlum: WgslPlum<WgslBuffer<WgslArray<F32>, 'mutable'>>;
-  depth8BufferPlum: WgslPlum<WgslBuffer<WgslArray<F32>, 'mutable'>>;
-  depth4BufferPlum: WgslPlum<WgslBuffer<WgslArray<F32>, 'mutable'>>;
-  depth2BufferPlum: WgslPlum<WgslBuffer<WgslArray<F32>, 'mutable'>>;
-
-  depth16SizePlum: WgslPlum<[number, number]>;
-  depth8SizePlum: WgslPlum<[number, number]>;
-  depth4SizePlum: WgslPlum<[number, number]>;
-  depth2SizePlum: WgslPlum<[number, number]>;
+  const buffers = sizes.map(([x, y]) =>
+    root.createBuffer(d.arrayOf(d.f32, x * y)).$usage('storage'),
+  );
+  return {
+    sizes,
+    buffers,
+    destroy: () => buffers.forEach((buffer) => buffer.destroy()),
+  };
 }
 
-export const makeCBuffer = (
-  resolutionPlum: WgslPlum<[number, number]>,
-): CBuffer => {
-  const modulo = 16 as const;
+export type CBuffer = ReturnType<typeof makeCBuffer>;
+export type ConeTracerOptions = { root: TgpuRoot; cBuffer: CBuffer };
 
-  const paddedResolutionPlum = wgsl.plum((get) => {
-    const res = get(resolutionPlum);
-    return [
-      // Rounding up to multiples of `modulo` since we divide the resolution by at most `modulo`
-      roundUp(res[0], modulo),
-      roundUp(res[1], modulo),
-    ] as [number, number];
+export default function ConeTracer({ root, cBuffer }: ConeTracerOptions) {
+  const camera = new Camera(root);
+  const pipelines = cBuffer.buffers.map((buffer, i) => {
+    const previous = i === 0 ? cBuffer.buffers.length - 1 : i - 1;
+    return root
+      .with(cameraPropsAccess, camera.cameraUniform)
+      .with(accessViewportSize, d.vec2f(...cBuffer.sizes[i]))
+      .with(previousSize, d.vec2u(...cBuffer.sizes[previous]))
+      .with(firstStep, i === 0)
+      .createComputePipeline({ compute: coneCompute })
+      .with(
+        root.createBindGroup(layout, {
+          previous: cBuffer.buffers[previous],
+          output: buffer,
+        }),
+      );
   });
-
-  const depth16SizePlum = wgsl.plum((get) => {
-    const res = get(paddedResolutionPlum);
-    return [
-      // making the buffers padded to accommodate for block size
-      roundUp(res[0] / 16, BlockSize),
-      roundUp(res[1] / 16, BlockSize),
-    ] as [number, number];
-  });
-
-  const depth8SizePlum = wgsl.plum((get) => {
-    const res = get(paddedResolutionPlum);
-    // making the buffers padded to accommodate for block size
-    return [roundUp(res[0] / 8, BlockSize), roundUp(res[1] / 8, BlockSize)] as [
-      number,
-      number,
-    ];
-  });
-
-  const depth4SizePlum = wgsl.plum((get) => {
-    const res = get(paddedResolutionPlum);
-    // making the buffers padded to accommodate for block size
-    return [roundUp(res[0] / 4, BlockSize), roundUp(res[1] / 4, BlockSize)] as [
-      number,
-      number,
-    ];
-  });
-
-  const depth2SizePlum = wgsl.plum((get) => {
-    const res = get(paddedResolutionPlum);
-    // making the buffers padded to accommodate for block size
-    return [roundUp(res[0] / 2, BlockSize), roundUp(res[1] / 2, BlockSize)] as [
-      number,
-      number,
-    ];
-  });
-
-  return {
-    modulo,
-
-    depth16SizePlum,
-    depth8SizePlum,
-    depth4SizePlum,
-    depth2SizePlum,
-
-    depth16BufferPlum: wgsl.plum((get) => {
-      const res = get(depth16SizePlum);
-
-      return wgsl
-        .buffer(arrayOf(f32, res[0] * res[1]))
-        .$allowMutable()
-        .$name('1/16 depth buffer');
-    }),
-
-    depth8BufferPlum: wgsl.plum((get) => {
-      const res = get(depth8SizePlum);
-
-      return wgsl
-        .buffer(arrayOf(f32, res[0] * res[1]))
-        .$allowMutable()
-        .$name('1/8 depth buffer');
-    }),
-
-    depth4BufferPlum: wgsl.plum((get) => {
-      const res = get(depth4SizePlum);
-
-      return wgsl
-        .buffer(arrayOf(f32, res[0] * res[1]))
-        .$allowMutable()
-        .$name('1/4 depth buffer');
-    }),
-
-    depth2BufferPlum: wgsl.plum((get) => {
-      const res = get(depth2SizePlum);
-
-      return wgsl
-        .buffer(arrayOf(f32, res[0] * res[1]))
-        .$allowMutable()
-        .$name('1/2 depth buffer');
-    }),
-  };
-};
-
-export type ConeTracerOptions = {
-  runtime: TypeGpuRuntime;
-  resolutionPlum: WgslPlum<[number, number]>;
-  cBuffer: CBuffer;
-};
-
-const ConeTracer = ({ runtime, cBuffer }: ConeTracerOptions) => {
-  const cone16Program = wgsl.plum((get) => {
-    return runtime.makeComputePipeline({
-      label: 'Cone Tracer - 1/16 pipeline',
-      workgroupSize: [BlockSize, BlockSize],
-      code: wgsl`
-        ${mainComputeFn}(${builtin.globalInvocationId});
-      `
-        // filling slots
-        .with(isFirstStep, 'true')
-        .with(inputBufferSizePlaceholder, depth2SizeBuffer.asUniform())
-        .with(outputBufferSizePlaceholder, depth16SizeBuffer.asUniform())
-        .with(inputBufferPlaceholder, get(cBuffer.depth2BufferPlum).asMutable())
-        .with(outputBufferSlot, get(cBuffer.depth16BufferPlum).asMutable())
-        .with(renderTargetSizeSlot, resolution16Buffer.asUniform()),
-    });
-  });
-
-  const cone8Program = wgsl.plum((get) => {
-    return runtime.makeComputePipeline({
-      label: 'Cone Tracer - 1/8 pipeline',
-      workgroupSize: [BlockSize, BlockSize],
-      code: wgsl`
-        ${mainComputeFn}(${builtin.globalInvocationId});
-      `
-        // filling slots
-        .with(isFirstStep, 'false')
-        .with(inputBufferSizePlaceholder, depth16SizeBuffer.asUniform())
-        .with(outputBufferSizePlaceholder, depth8SizeBuffer.asUniform())
-        .with(
-          inputBufferPlaceholder,
-          get(cBuffer.depth16BufferPlum).asMutable(),
-        )
-        .with(outputBufferSlot, get(cBuffer.depth8BufferPlum).asMutable())
-        .with(renderTargetSizeSlot, resolution8Buffer.asUniform()),
-    });
-  });
-
-  const cone4Program = wgsl.plum((get) => {
-    return runtime.makeComputePipeline({
-      label: 'Cone Tracer - 1/4 pipeline',
-      workgroupSize: [BlockSize, BlockSize],
-      code: wgsl`
-        ${mainComputeFn}(${builtin.globalInvocationId});
-      `
-        // filling slots
-        .with(isFirstStep, 'false')
-        .with(inputBufferSizePlaceholder, depth8SizeBuffer.asUniform())
-        .with(outputBufferSizePlaceholder, depth4SizeBuffer.asUniform())
-        .with(inputBufferPlaceholder, get(cBuffer.depth8BufferPlum).asMutable())
-        .with(outputBufferSlot, get(cBuffer.depth4BufferPlum).asMutable())
-        .with(renderTargetSizeSlot, resolution4Buffer.asUniform()),
-    });
-  });
-
-  const cone2Program = wgsl.plum((get) => {
-    return runtime.makeComputePipeline({
-      label: 'Cone Tracer - 1/2 pipeline',
-      workgroupSize: [BlockSize, BlockSize],
-      code: wgsl`
-        ${mainComputeFn}(${builtin.globalInvocationId});
-      `
-        // filling slots
-        .with(isFirstStep, false)
-        .with(inputBufferSizePlaceholder, depth4SizeBuffer.asUniform())
-        .with(outputBufferSizePlaceholder, depth2SizeBuffer.asUniform())
-        .with(inputBufferPlaceholder, get(cBuffer.depth4BufferPlum).asMutable())
-        .with(outputBufferSlot, get(cBuffer.depth2BufferPlum).asMutable())
-        .with(renderTargetSizeSlot, resolution2Buffer.asUniform()),
-    });
-  });
-
   return {
     perform() {
-      const depth16Size = runtime.readPlum(cBuffer.depth16SizePlum);
-      const depth8Size = runtime.readPlum(cBuffer.depth8SizePlum);
-      const depth4Size = runtime.readPlum(cBuffer.depth4SizePlum);
-      const depth2Size = runtime.readPlum(cBuffer.depth2SizePlum);
-
-      const opts = ([x, y]: [number, number]) => ({
-        workgroups: [
-          Math.ceil(x / BlockSize),
-          Math.ceil(y / BlockSize),
-        ] as const,
-      });
-
-      runtime.readPlum(cone16Program).execute(opts(depth16Size));
-      runtime.readPlum(cone8Program).execute(opts(depth8Size));
-      runtime.readPlum(cone4Program).execute(opts(depth4Size));
-      runtime.readPlum(cone2Program).execute(opts(depth2Size));
+      camera.update();
+      for (let i = 0; i < pipelines.length; i++) {
+        pipelines[i].dispatchWorkgroups(
+          Math.ceil(cBuffer.sizes[i][0] / 8),
+          Math.ceil(cBuffer.sizes[i][1] / 8),
+        );
+      }
     },
   };
-};
-
-export default ConeTracer;
+}

@@ -1,5 +1,23 @@
-import fullScreenQuadWGSL from '../../shaders/fullScreenQuad.wgsl?raw';
-import resampleWGSL from './resample_linear.wgsl?raw';
+import { tgpu, d, std } from 'typegpu';
+import { fullScreenTriangle } from '../../lib/shaders/fullScreenQuad';
+
+const layout = tgpu.bindGroupLayout({
+  sampler: { sampler: 'filtering' },
+  texture: { texture: d.texture2d(d.f32) },
+});
+
+export const resampleLinear = tgpu.fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})((input) => {
+  'use gpu';
+  // The shared triangle has bottom-left UVs; textures use a top-left origin.
+  return std.textureSample(
+    layout.$.texture,
+    layout.$.sampler,
+    d.vec2f(input.uv.x, 1 - input.uv.y),
+  );
+});
 
 type Options = {
   device: GPUDevice;
@@ -14,72 +32,28 @@ export const ResampleStep = ({
   sourceTexture,
   targetTexture,
 }: Options) => {
+  const root = tgpu.initFromDevice({ device });
   const sampler = device.createSampler({
-    label: 'Resample - Sampler',
     minFilter: 'linear',
     magFilter: 'linear',
-    addressModeU: 'clamp-to-edge',
-    addressModeV: 'clamp-to-edge',
-    addressModeW: 'clamp-to-edge',
   });
-
-  const fullScreenQuadShader = device.createShaderModule({
-    label: 'Resample - Full Screen Quad Shader',
-    code: fullScreenQuadWGSL,
+  const bindGroup = root.createBindGroup(layout, {
+    sampler,
+    texture: sourceTexture,
   });
-
-  const resampleShader = device.createShaderModule({
-    label: 'Resample - Resample Shader',
-    code: resampleWGSL,
-  });
-
-  const pipeline = device.createRenderPipeline({
-    label: 'Resample Pipeline',
-    layout: 'auto',
-    vertex: {
-      module: fullScreenQuadShader,
-      entryPoint: 'main',
-    },
-    fragment: {
-      module: resampleShader,
-      entryPoint: 'main',
-      targets: [{ format: targetFormat }],
-    },
-  });
-
-  const passColorAttachment: GPURenderPassColorAttachment = {
-    view: targetTexture,
-
-    clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-    loadOp: 'clear',
-    storeOp: 'store',
-  };
-
-  const passDescriptor: GPURenderPassDescriptor = {
-    colorAttachments: [passColorAttachment],
-  };
-
-  const bindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [
-      {
-        binding: 0,
-        resource: sampler,
-      },
-      {
-        binding: 1,
-        resource: sourceTexture,
-      },
-    ],
-  });
-
+  const pipeline = root
+    .createRenderPipeline({
+      vertex: fullScreenTriangle,
+      fragment: resampleLinear,
+      targets: { format: targetFormat },
+    })
+    .with(bindGroup);
   return {
     perform(commandEncoder: GPUCommandEncoder) {
-      const pass = commandEncoder.beginRenderPass(passDescriptor);
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, bindGroup);
-      pass.draw(6);
-      pass.end();
+      pipeline
+        .with(commandEncoder)
+        .withColorAttachment({ view: targetTexture })
+        .draw(3);
     },
   };
 };

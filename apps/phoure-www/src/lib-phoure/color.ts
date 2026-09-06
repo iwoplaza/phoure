@@ -1,5 +1,4 @@
-import { tgpu } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d, tgpu } from 'typegpu';
 import { dot } from 'typegpu/std';
 
 // Preserve the luminance coefficients used by the trained upscaler.

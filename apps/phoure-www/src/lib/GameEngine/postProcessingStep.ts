@@ -1,6 +1,5 @@
-import { tgpu, type TgpuRoot } from 'typegpu';
+import { d, tgpu, type TgpuRoot } from 'typegpu';
 import { textureLoad } from 'typegpu/std';
-import * as d from 'typegpu/data';
 
 import type { GBuffer } from '../gBuffer';
 import { fullScreenTriangle } from '../shaders/fullScreenQuad';

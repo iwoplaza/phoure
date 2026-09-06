@@ -1,6 +1,4 @@
-import { tgpu, type TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std, tgpu, type TgpuRoot } from 'typegpu';
 import { convertRgbToY } from '#src/lib-phoure/color.ts';
 import { accessViewportSize } from '@typegpu/common';
 import { randf } from '@typegpu/noise';

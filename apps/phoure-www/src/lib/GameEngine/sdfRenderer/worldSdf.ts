@@ -1,5 +1,4 @@
-import { tgpu } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d, tgpu } from 'typegpu';
 import { abs, floor, min, mix, mul, pow } from 'typegpu/std';
 import { sdSphere } from '@typegpu/sdf';
 import { MarchParams, ShapeContext } from '#src/lib-ray-marching/index.ts';

@@ -1,6 +1,4 @@
-import { tgpu, type TgpuFn } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std, tgpu, type TgpuFn } from 'typegpu';
 import { ShapeContext } from './types.ts';
 
 type SampleSdf = TgpuFn<(pos: d.Vec3f) => d.F32>;

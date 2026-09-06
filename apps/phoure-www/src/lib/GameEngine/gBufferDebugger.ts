@@ -1,6 +1,4 @@
-import { tgpu, type TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std, tgpu, type TgpuRoot } from 'typegpu';
 
 import { displayModeAtom } from '#src/lib/controlAtoms.ts';
 import { fullScreenTriangle } from '#src/lib/shaders/fullScreenQuad.ts';

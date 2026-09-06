@@ -1,5 +1,4 @@
-import * as d from 'typegpu/data';
-import { tgpu, type TgpuLazy, type TgpuFn } from 'typegpu';
+import { d, tgpu, type TgpuLazy, type TgpuFn } from 'typegpu';
 import { dot } from 'typegpu/std';
 
 /** Has to be divisible by 4 */

@@ -1,9 +1,7 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
 import { ycbcrToRgbMatrix } from './color';
 import { accessViewportSize } from '@typegpu/common';
-import { tgpu } from 'typegpu';
-import * as std from 'typegpu/std';
-import * as d from 'typegpu/data';
+import { std, d, tgpu } from 'typegpu';
 
 export const layout = tgpu.bindGroupLayout({
   blurredTexture: { texture: d.texture2d(d.f32) },

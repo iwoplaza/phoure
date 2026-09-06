@@ -5,8 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.0.0+sha512.b8fef5494bd3fe4cbd4edabd0745df2ee5be3e4b0b8b08fa643aa3e4c6702ccc0f00d68fa8a8c9858a735a0032485a44990ed2810526c875e416f001b17df12b",
   "scripts": {
-    "dev": "pnpm run -r dev:build && pnpm run -r --parallel dev:watch",
-    "dev:build": "pnpm run -r dev:build",
+    "dev": "pnpm --filter phoure-www dev",
     "build": "pnpm run -r build",
     "test": "pnpm -r build && pnpm run '/^test:.*/'",
     "test:types": "pnpm run -r test:types",

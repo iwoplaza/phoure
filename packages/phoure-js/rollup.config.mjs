@@ -8,7 +8,7 @@ import typegpu from 'unplugin-typegpu/rollup';
  */
 export default {
   input: 'src/index.ts',
-  external: ['typegpu', /^typegpu\//],
+  external: ['typegpu', /^typegpu\//, '@typegpu/color'],
   output: [
     {
       file: 'dist/index.js',

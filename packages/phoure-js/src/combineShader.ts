@@ -1,10 +1,13 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
-import { ycbcrToRgbMatrix } from './color';
-import { accessViewportSize } from '@typegpu/common';
+import { ycbcrToRgbMatrix } from './color.js';
+import { accessViewportSize } from './viewport.js';
 import { std, d, tgpu } from 'typegpu';
 
 export const layout = tgpu.bindGroupLayout({
-  blurredTexture: { texture: d.texture2d(d.f32) },
+  blurredTexture: {
+    texture: d.texture2d(d.f32),
+    sampleType: 'unfilterable-float',
+  },
   mendedBuffer: { storage: (n: number) => d.arrayOf(d.f32, n) },
 });
 

@@ -36,6 +36,10 @@ export function createNetworkLayer(
   }
 
   return {
+    destroy() {
+      weightsBuffer.destroy();
+      biasesBuffer.destroy();
+    },
     bindGroup: root.createBindGroup(layerLayout, {
       weights: weightsBuffer,
       biases: biasesBuffer,

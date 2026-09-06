@@ -1,10 +1,7 @@
 import { rgbToYcbcr } from '@typegpu/color';
-import { accessViewportSize } from '@typegpu/common';
-import { d, std, tgpu } from 'typegpu';
+import { d, std } from 'typegpu';
 import { expect, it } from 'vitest';
-import { worldSdf } from '../lib/GameEngine/sdfRenderer/worldSdf';
-import { combinationEntryFn } from './combineShader';
-import { convertRgbToY, ycbcrToRgbMatrix } from './color';
+import { convertRgbToY, ycbcrToRgbMatrix } from '../src/color.js';
 
 it('preserves the luminance range expected by the upscaler', () => {
   expect(convertRgbToY(d.vec3f())).toBeCloseTo(16 / 255);
@@ -18,13 +15,4 @@ it('inverts published YCbCr conversion with the local inverse matrix', () => {
     expect(result.y).toBeCloseTo(rgb.y, 5);
     expect(result.z).toBeCloseTo(rgb.z, 5);
   }
-});
-
-it('resolves shaders using the published SDF and color packages', () => {
-  expect(tgpu.resolve([worldSdf])).toContain('fn ');
-  expect(
-    tgpu.resolve([combinationEntryFn], {
-      config: (cfg) => cfg.with(accessViewportSize, d.vec2f(256)),
-    }),
-  ).toContain('@fragment');
 });

@@ -1,6 +1,6 @@
-import { accessViewportSize } from '@typegpu/common';
-import { convertRgbToY } from '#src/lib-phoure/color.ts';
-import { d, std, tgpu, type TgpuRoot } from 'typegpu';
+import { accessViewportSize } from './viewport.js';
+import { convertRgbToY } from './color.js';
+import { common, d, std, tgpu, type TgpuRoot } from 'typegpu';
 
 import {
   convolveFn,
@@ -8,26 +8,37 @@ import {
   inChannelsSlot,
   kernelRadiusSlot,
   outChannelsSlot,
-} from '#src/lib/GameEngine/convolve.ts';
-import type { GBuffer } from '#src/lib/gBuffer.ts';
-import { fullScreenTriangle } from '#src/lib/shaders/fullScreenQuad.ts';
+} from './convolve.js';
 import {
   combinationEntryFn,
   layout as combinationLayout,
-} from './combineShader.ts';
-import { Model7 } from './model7.ts';
-import { createNetworkLayer, layerLayout } from './networkLayer.ts';
+} from './combineShader.js';
+import { Model7 } from './model7.js';
+import { createNetworkLayer, layerLayout } from './networkLayer.js';
 
 const blockDim = 8;
 
 const FIRST_DEPTH = 8;
 const SECOND_DEPTH = 8;
 
-type Options = {
+export interface MenderStepOptions {
   root: TgpuRoot;
-  gBuffer: GBuffer;
-  targetTexture: () => GPUTextureView;
-};
+  /** Resolution shared by the color, auxiliary, and output textures. */
+  size: readonly [number, number];
+  /** Bicubic-upscaled RGB input, with TEXTURE_BINDING usage. */
+  colorTexture: GPUTextureView;
+  /** RGBA: normal.x, normal.y, albedo luminance, emission luminance. */
+  auxTexture: GPUTextureView;
+  /** Output render attachment format. Defaults to rgba8unorm. */
+  targetFormat?: GPUTextureFormat;
+}
+
+export interface MenderStep {
+  /** Records inference and combination; submits only when no encoder is supplied. */
+  perform(target: GPUTextureView, encoder?: GPUCommandEncoder): void;
+  /** Releases owned buffers, leaving the root and caller-owned textures alive. */
+  destroy(): void;
+}
 
 export const reluSlot = tgpu.slot<boolean>();
 export const inputFromGBufferSlot = tgpu.slot<boolean>();
@@ -142,27 +153,36 @@ export const entryComputeFn = tgpu.computeFn({
   }
 });
 
-export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
-  // Resource locators
-
-  const viewportSizeUniform = root.createUniform(d.vec2f);
+export const MenderStep = ({
+  root,
+  size: [width, height],
+  colorTexture,
+  auxTexture,
+  targetFormat = 'rgba8unorm',
+}: MenderStepOptions): MenderStep => {
+  if (
+    !Number.isSafeInteger(width) ||
+    !Number.isSafeInteger(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    throw new RangeError('MenderStep size must contain positive integers.');
+  }
+  const size = [width, height] as const;
+  const viewportSize = d.vec2f(width, height);
 
   // Textures
 
   const firstWorkBuffer = root
-    .createBuffer(
-      d.arrayOf(d.f32, gBuffer.size[0] * gBuffer.size[1] * FIRST_DEPTH),
-    )
+    .createBuffer(d.arrayOf(d.f32, size[0] * size[1] * FIRST_DEPTH))
     .$usage('storage');
 
   const secondWorkBuffer = root
-    .createBuffer(
-      d.arrayOf(d.f32, gBuffer.size[0] * gBuffer.size[1] * SECOND_DEPTH),
-    )
+    .createBuffer(d.arrayOf(d.f32, size[0] * size[1] * SECOND_DEPTH))
     .$usage('storage');
 
   const mendedResultBuffer = root
-    .createBuffer(d.arrayOf(d.f32, gBuffer.size[0] * gBuffer.size[1]))
+    .createBuffer(d.arrayOf(d.f32, size[0] * size[1]))
     .$usage('storage');
 
   //
@@ -191,7 +211,7 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
         .with(outChannelsSlot, options.outChannels)
         .with(reluSlot, options.relu)
         .with(inputFromGBufferSlot, options.inputFromGBuffer)
-        .with(accessViewportSize, viewportSizeUniform)
+        .with(accessViewportSize, viewportSize)
         // ---
         .createComputePipeline({ compute: entryComputeFn })
         .$name(options.label)
@@ -229,22 +249,22 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
   // Raw buffers express this shared byte layout without an unsafe TypeScript cast.
   const ioBindGroups = [
     root.createBindGroup(ioLayout, {
-      blurred_tex: gBuffer.upscaledView,
-      aux_tex: gBuffer.auxView,
+      blurred_tex: colorTexture,
+      aux_tex: auxTexture,
       output_buffer: firstWorkBuffer,
       input_buffer: root.unwrap(secondWorkBuffer), // <- UNUSED
     }),
     root.createBindGroup(ioLayout, {
       input_buffer: root.unwrap(firstWorkBuffer),
       output_buffer: secondWorkBuffer,
-      blurred_tex: gBuffer.upscaledView, // <- UNUSED
-      aux_tex: gBuffer.auxView, // <- UNUSED
+      blurred_tex: colorTexture, // <- UNUSED
+      aux_tex: auxTexture, // <- UNUSED
     }),
     root.createBindGroup(ioLayout, {
       input_buffer: root.unwrap(secondWorkBuffer),
       output_buffer: mendedResultBuffer,
-      blurred_tex: gBuffer.upscaledView, // <- UNUSED
-      aux_tex: gBuffer.auxView, // <- UNUSED
+      blurred_tex: colorTexture, // <- UNUSED
+      aux_tex: auxTexture, // <- UNUSED
     }),
   ];
 
@@ -253,43 +273,56 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
   // ---
 
   const combinationPipeline = root
-    .with(accessViewportSize, viewportSizeUniform)
+    .with(accessViewportSize, viewportSize)
     .createRenderPipeline({
-      vertex: fullScreenTriangle,
+      vertex: common.fullScreenTriangle,
       fragment: combinationEntryFn,
-      targets: { format: 'rgba8unorm' },
+      targets: { format: targetFormat },
     });
 
   const combinationBindGroup = root.createBindGroup(combinationLayout, {
-    blurredTexture: gBuffer.upscaledView,
+    blurredTexture: colorTexture,
     mendedBuffer: mendedResultBuffer,
   });
 
-  viewportSizeUniform.write(d.vec2f(...gBuffer.size));
+  let destroyed = false;
 
   return {
-    perform() {
+    perform(target, encoder) {
+      if (destroyed) throw new Error('This MenderStep has been destroyed.');
+      const commandEncoder = encoder ?? root.device.createCommandEncoder();
       for (let i = 0; i < 3; ++i) {
         pipelines[i]
+          .with(commandEncoder)
           .with(ioLayout, ioBindGroups[i])
           .with(layerLayout, convLayers[i].bindGroup)
           .dispatchWorkgroups(
-            Math.ceil(gBuffer.size[0] / blockDim),
-            Math.ceil(gBuffer.size[1] / blockDim),
+            Math.ceil(size[0] / blockDim),
+            Math.ceil(size[1] / blockDim),
           );
       }
 
       // Combining the convolved result with the initial blurry render
 
       combinationPipeline
+        .with(commandEncoder)
         .withColorAttachment({
-          view: targetTexture(),
+          view: target,
           clearValue: [0, 0, 0, 1],
           loadOp: 'clear',
           storeOp: 'store',
         })
         .with(combinationLayout, combinationBindGroup)
         .draw(3);
+      if (!encoder) root.device.queue.submit([commandEncoder.finish()]);
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      firstWorkBuffer.destroy();
+      secondWorkBuffer.destroy();
+      mendedResultBuffer.destroy();
+      for (const layer of convLayers) layer.destroy();
     },
   };
 };

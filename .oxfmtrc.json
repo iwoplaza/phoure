@@ -9,6 +9,6 @@
   "ignorePatterns": [
     "**/dist/**",
     "pnpm-lock.yaml",
-    "apps/phoure-www/src/lib-phoure/model7.ts"
+    "packages/phoure-js/src/model7.ts"
   ]
 }

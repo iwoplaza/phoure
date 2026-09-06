@@ -1,5 +1,5 @@
 import { d, std, tgpu, type TgpuRoot } from 'typegpu';
-import { convertRgbToY } from '#src/lib-phoure/color.ts';
+import { convertRgbToY } from 'phoure';
 import { accessViewportSize } from '@typegpu/common';
 import { randf } from '@typegpu/noise';
 import { atom } from 'jotai';

@@ -1,6 +1,6 @@
 import type { SetStateAction } from 'jotai';
 import { BicubicFilter } from '#src/lib-filter/index.ts';
-import { MenderStep } from '#src/lib-phoure/index.ts';
+import { MenderStep } from 'phoure';
 import { tgpu } from 'typegpu';
 
 import { PerformanceManager } from '#src/lib/PerformanceManager.ts';
@@ -109,9 +109,12 @@ export const GameEngine = (
 
     const menderStep = MenderStep({
       root,
-      gBuffer,
-      targetTexture: () => gBuffer.outRawRenderView,
+      size: gBuffer.size,
+      colorTexture: gBuffer.upscaledView,
+      auxTexture: gBuffer.auxView,
     });
+
+    addCleanup(() => menderStep.destroy());
 
     const gBufferDebugger = makeGBufferDebugger(
       root,
@@ -167,7 +170,7 @@ export const GameEngine = (
         postProcessing.perform();
       } else if (displayMode === 'upscaled') {
         // -- Restoring quality to the render using convolution.
-        menderStep.perform();
+        menderStep.perform(gBuffer.outRawRenderView);
         postProcessing.perform();
       }
 
@@ -207,7 +210,7 @@ export const GameEngine = (
   return {
     destroy() {
       destroyed = true;
-      for (const cb of cleanups) {
+      for (const cb of cleanups.reverse()) {
         cb();
       }
     },

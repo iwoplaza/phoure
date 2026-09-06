@@ -31,7 +31,7 @@ class AlreadyDestroyedError extends Error {
 }
 
 const settingsToPerf = new Map<string, PerformanceManager>();
-// biome-ignore lint/suspicious/noExplicitAny: <hack>
+// oxlint-disable-next-line typescript/no-explicit-any -- <hack>
 (window as any).settingsToPerf = settingsToPerf;
 
 const noteFrame = () => {

@@ -27,7 +27,8 @@ export class GBuffer {
 
     this.quarterATexture = root.device.createTexture({
       size: this.quarterSize,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT |
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT |
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.STORAGE_BINDING,
       format: 'rgba8unorm',
@@ -35,7 +36,8 @@ export class GBuffer {
 
     this.quarterBTexture = root.device.createTexture({
       size: this.quarterSize,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT |
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT |
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.STORAGE_BINDING,
       format: 'rgba8unorm',
@@ -43,14 +45,15 @@ export class GBuffer {
 
     this.upscaledTexture = root.device.createTexture({
       size: this.size,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT |
-        GPUTextureUsage.TEXTURE_BINDING,
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
       format: 'rgba8unorm',
     });
 
     this.rawRenderATexture = root.device.createTexture({
       size: this.size,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT |
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT |
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.STORAGE_BINDING,
       format: 'rgba8unorm',
@@ -58,7 +61,8 @@ export class GBuffer {
 
     this.rawRenderBTexture = root.device.createTexture({
       size: this.size,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT |
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT |
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.STORAGE_BINDING,
       format: 'rgba8unorm',
@@ -66,7 +70,8 @@ export class GBuffer {
 
     this.auxTexture = root.device.createTexture({
       size: _size,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT |
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT |
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.STORAGE_BINDING,
       format: 'rgba16float',

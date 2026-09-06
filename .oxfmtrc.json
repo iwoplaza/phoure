@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 80,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "arrowParens": "always",
+  "proseWrap": "always",
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "**/dist/**",
+    "pnpm-lock.yaml",
+    "apps/phoure-www/src/lib-phoure/model7.ts"
+  ]
+}

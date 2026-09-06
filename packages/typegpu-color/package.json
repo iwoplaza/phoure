@@ -15,14 +15,25 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["README.md", "package.json", "dist"],
+  "files": [
+    "README.md",
+    "package.json",
+    "dist"
+  ],
   "scripts": {
     "build": "rollup -c",
     "dev:build": "rollup -c",
     "dev:watch": "rollup -c --watch",
     "test:types": "pnpm tsc --p ./tsconfig.json"
   },
-  "keywords": ["typegpu", "color", "webgpu", "gpu", "graphics", "gpgpu"],
+  "keywords": [
+    "typegpu",
+    "color",
+    "webgpu",
+    "gpu",
+    "graphics",
+    "gpgpu"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",

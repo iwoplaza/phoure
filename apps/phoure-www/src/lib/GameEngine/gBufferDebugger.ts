@@ -22,8 +22,7 @@ const mainFragFn = tgpu['~unstable']
   .fragmentFn({
     in: { coord_f: d.builtin.position, uv: d.vec2f },
     out: d.vec4f,
-  })(
-    /* wgsl */ `{
+  })(/* wgsl */ `{
     let coord = vec2<i32>(floor(in.coord_f.xy));
     let channel_mode = channelMode;
 
@@ -91,8 +90,7 @@ const mainFragFn = tgpu['~unstable']
     }
 
     return result;
-  }`,
-  )
+  }`)
   .$uses({
     blurredTex: layout.bound.blurredTex,
     auxTex: layout.bound.auxTex,

@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["unicorn", "typescript", "oxc", "react", "jsx-a11y"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-unused-vars": "error",
+    "typescript/no-explicit-any": "error",
+    "no-param-reassign": "warn",
+    "unicorn/no-empty-file": "warn",
+    "react/set-state-in-effect": "warn",
+    "react/purity": "warn",
+    "jsx-a11y/heading-has-content": "warn"
+  },
+  "ignorePatterns": ["**/dist/**", "**/*.d.ts"]
+}

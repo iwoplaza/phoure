@@ -15,14 +15,24 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["README.md", "package.json", "dist"],
+  "files": [
+    "README.md",
+    "package.json",
+    "dist"
+  ],
   "scripts": {
     "build": "rollup -c",
     "dev:build": "rollup -c",
     "dev:watch": "rollup -c --watch",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
   },
-  "keywords": ["typegpu", "sdf", "signed distance field", "gpu", "webgpu"],
+  "keywords": [
+    "typegpu",
+    "sdf",
+    "signed distance field",
+    "gpu",
+    "webgpu"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",

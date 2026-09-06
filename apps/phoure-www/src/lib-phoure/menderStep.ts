@@ -253,18 +253,18 @@ export const MenderStep = ({ root, gBuffer, targetTexture }: Options) => {
       blurred_tex: gBuffer.upscaledView,
       aux_tex: gBuffer.auxView,
       output_buffer: firstWorkBuffer,
-      // biome-ignore lint/suspicious/noExplicitAny: its fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- its fine
       input_buffer: secondWorkBuffer as any, // <- UNUSED
     }),
     root.createBindGroup(ioLayout, {
-      // biome-ignore lint/suspicious/noExplicitAny: its fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- its fine
       input_buffer: firstWorkBuffer as any,
       output_buffer: secondWorkBuffer,
       blurred_tex: gBuffer.upscaledView, // <- UNUSED
       aux_tex: gBuffer.auxView, // <- UNUSED
     }),
     root.createBindGroup(ioLayout, {
-      // biome-ignore lint/suspicious/noExplicitAny: its fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- its fine
       input_buffer: secondWorkBuffer as any,
       output_buffer: mendedResultBuffer,
       blurred_tex: gBuffer.upscaledView, // <- UNUSED

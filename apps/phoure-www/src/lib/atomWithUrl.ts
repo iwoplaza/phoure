@@ -35,7 +35,8 @@ export const atomWithUrl = <T>(
   defaultValue: T,
   options?: { encode: (val: T) => string; decode: (val: string) => unknown },
 ) => {
-  const optionsOrInferred = options ??
+  const optionsOrInferred =
+    options ??
     typeToParam[typeof defaultValue as keyof typeof typeToParam] ??
     objParam;
 
@@ -54,7 +55,7 @@ export const atomWithUrl = <T>(
       searchParams.set(key, encode(newValue));
 
       set(
-        // biome-ignore lint/suspicious/noExplicitAny: <really annoying>
+        // oxlint-disable-next-line typescript/no-explicit-any -- <really annoying>
         locationAtom as any,
         {
           ...prev,

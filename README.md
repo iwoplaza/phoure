@@ -43,8 +43,16 @@ with Blender's Geometry Nodes. **No artist's work was used in the process**.
 
 ### Local setup
 
-- Install Node.js
+- Install Node.js 22.12+
 - Install pnpm
 - Run `pnpm install` to install all dependencies
 - Run `pnpm dev` to run the development server, making the web app available via
   the web browser.
+
+### Linting and formatting
+
+- Run `pnpm check` to lint with oxlint and check formatting with oxfmt.
+- Run `pnpm fix` to apply lint fixes and format files.
+- Use `pnpm lint` or `pnpm format:check` to run either check independently.
+- Install the recommended Oxc VS Code extension for linting and formatting on
+  save. Astro files continue to use the Astro extension for formatting.

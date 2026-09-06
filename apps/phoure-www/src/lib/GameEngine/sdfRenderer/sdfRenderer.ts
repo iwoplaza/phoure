@@ -52,6 +52,7 @@ export const accumulatedLayersAtom = atom(0);
 const reflect = tgpu.fn(
   [d.vec3f, d.vec3f, d.f32, d.ptrFn(d.f32)],
   d.vec3f,
+  // oxlint-disable-next-line no-unused-vars -- This parameter is a WGSL output pointer.
 )((rayDir, normal, matRoughness, outRoughness) => {
   const slope = std.dot(rayDir, normal);
   const refl_dir = rayDir.sub(normal.mul(2 * slope));
@@ -59,7 +60,7 @@ const reflect = tgpu.fn(
   const fresnel = 1 - std.pow(1 + slope, 16);
   const roughness = matRoughness * fresnel;
   // TODO: Fix when boxed values are introduced
-  // biome-ignore lint/style/noParameterAssign: Has to be done like this for now
+  // oxlint-disable-next-line no-param-reassign -- Has to be done like this for now
   outRoughness = roughness;
 
   let new_ray_dir = randf.onHemisphere(normal);

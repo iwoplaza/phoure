@@ -1,5 +1,5 @@
 import { tgpu, d, std, type TgpuRoot } from 'typegpu';
-import { accessViewportSize } from '@typegpu/common';
+import { accessViewportSize } from '#src/lib/viewport.ts';
 import {
   constructRayDir,
   constructRayPos,

@@ -66,4 +66,4 @@ Run `pnpm --dir packages/phoure-js pack` from the repository root to build and
 pack the library. `prepack` generates ESM, CommonJS, and TypeScript
 declarations; `publishConfig` redirects the tarball's entry points to `dist`.
 Packed shaders already include TypeGPU metadata. The package has no dependency
-on demo code or the local `@typegpu/common` workspace package.
+on demo code.
